@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoMascot - Live Rig Inspector</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #viewport-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+        #mascotCanvas {
+            background: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            cursor: crosshair;
+        }
+        #sidebar {
+            width: 380px;
+            background: #1e293b;
+            border-left: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+            background: #0f172a;
+        }
+        .header h1 { font-size: 18px; font-weight: 700; color: #38bdf8; }
+        .header p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        .section {
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .control-group {
+            margin-bottom: 12px;
+        }
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .control-label span.val { color: #38bdf8; font-weight: 600; }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #38bdf8;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .btn {
+            background: #334155;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+        .btn:hover { background: #475569; border-color: #38bdf8; color: #38bdf8; }
+        .btn.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
+        .btn-primary {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: white;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        .btn-primary:hover { background: #1d4ed8; color: white; }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+        .badge {
+            font-size: 10px;
+            background: #0284c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        #badge-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="viewport-container">
+        <div id="badge-status">🎮 Live Rig: <span style="color:#38bdf8;" id="char-name">Chibi Tech Guide</span> • Gaze Tracker Active</div>
+        <canvas id="mascotCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1>VideoMascot Inspector</h1>
+            <p>2.5D Layered Puppet & Kinematic Rig Tool</p>
+        </div>
+
+        <!-- Quick Poses -->
+        <div class="section">
+            <div class="section-title">Quick Actions & Poses</div>
+            <div class="btn-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <button class="btn" onclick="applyPose('point_stick')">👉 Point Stick</button>
+                <button class="btn" onclick="applyPose('happy_wave')">👋 Wave Hello</button>
+                <button class="btn" onclick="applyPose('thumbs_up')">👍 Thumbs Up</button>
+                <button class="btn" onclick="applyPose('thinking')">🤔 Thinking</button>
+                <button class="btn" onclick="applyPose('surprised')">😲 Surprised</button>
+                <button class="btn" onclick="applyPose('rest')">🧘 Neutral Rest</button>
+            </div>
+        </div>
+
+        <!-- Viseme Pad -->
+        <div class="section">
+            <div class="section-title">Preston Blair 9 Visemes <span class="badge">Lip-Sync</span></div>
+            <div class="btn-grid">
+                <button class="btn active" id="v-rest" onclick="setViseme('rest')">/rest/</button>
+                <button class="btn" id="v-A_I" onclick="setViseme('A_I')">/A_I/</button>
+                <button class="btn" id="v-E" onclick="setViseme('E')">/E/</button>
+                <button class="btn" id="v-O" onclick="setViseme('O')">/O/</button>
+                <button class="btn" id="v-U" onclick="setViseme('U')">/U/</button>
+                <button class="btn" id="v-M_B_P" onclick="setViseme('M_B_P')">/M_B_P/</button>
+                <button class="btn" id="v-F_V" onclick="setViseme('F_V')">/F_V/</button>
+                <button class="btn" id="v-L_D_T_N" onclick="setViseme('L_D_T_N')">/L_D_T_N/</button>
+                <button class="btn" id="v-W_Q" onclick="setViseme('W_Q')">/W_Q/</button>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="toggleSpeechSim()">
+                <span id="speech-btn-label">▶ Play Lip-Sync Audio Simulation</span>
+            </button>
+        </div>
+
+        <!-- Procedural & Overlays -->
+        <div class="section">
+            <div class="section-title">Procedural Physics & FX</div>
+            <div class="toggle-row">
+                <span>Dynamic Gaze Tracking</span>
+                <input type="checkbox" id="chk-gaze" checked>
+            </div>
+            <div class="toggle-row">
+                <span>Breathing / Bobbing</span>
+                <input type="checkbox" id="chk-breathe" checked>
+            </div>
+            <div class="toggle-row">
+                <span>Auto-Blink Cycle</span>
+                <input type="checkbox" id="chk-blink" checked>
+            </div>
+            <div class="toggle-row">
+                <span>Show Bone Skeleton</span>
+                <input type="checkbox" id="chk-skeleton" onchange="render()">
+            </div>
+        </div>
+
+        <!-- Kinematic Sliders -->
+        <div class="section">
+            <div class="section-title">Joint Kinematics</div>
+            <div class="control-group">
+                <div class="control-label"><span>Head Tilt</span><span class="val" id="val-head">0°</span></div>
+                <input type="range" id="sld-head" min="-45" max="45" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Right Shoulder (Aim)</span><span class="val" id="val-r-sh">0°</span></div>
+                <input type="range" id="sld-r-sh" min="-180" max="180" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Right Elbow</span><span class="val" id="val-r-el">0°</span></div>
+                <input type="range" id="sld-r-el" min="-150" max="150" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Left Shoulder</span><span class="val" id="val-l-sh">0°</span></div>
+                <input type="range" id="sld-l-sh" min="-180" max="180" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Left Elbow</span><span class="val" id="val-l-el">0°</span></div>
+                <input type="range" id="sld-l-el" min="-150" max="150" value="0" oninput="onSliderChange()">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MANIFEST = {"id": "chibi_tech_guide", "name": "Chibi Tech Guide", "version": "1.0.0", "description": "High-resolution, beautifully shaded 2.5D modular tech mascot.", "canvas_size": [800, 800], "bones": {"root": {"parent": null, "position": [400.0, 700.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 0}, "torso": {"parent": "root", "position": [0.0, -220.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [100.0, 110.0], "length": 0.0, "z_index": 10}, "head": {"parent": "torso", "position": [0.0, -130.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [150.0, 200.0], "length": 0.0, "z_index": 20}, "arm_l_upper": {"parent": "torso", "position": [-80.0, -60.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [30.0, 20.0], "length": 70.0, "z_index": 5}, "arm_l_lower": {"parent": "arm_l_upper", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [30.0, 15.0], "length": 70.0, "z_index": 6}, "hand_l": {"parent": "arm_l_lower", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [35.0, 20.0], "length": 0.0, "z_index": 7}, "arm_r_upper": {"parent": "torso", "position": [80.0, -60.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [30.0, 20.0], "length": 70.0, "z_index": 15}, "arm_r_lower": {"parent": "arm_r_upper", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [30.0, 15.0], "length": 70.0, "z_index": 16}, "hand_r": {"parent": "arm_r_lower", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [35.0, 20.0], "length": 0.0, "z_index": 17}, "prop_r": {"parent": "hand_r", "position": [0.0, 10.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [10.0, 140.0], "length": 0.0, "z_index": 18}}, "slots": {"torso": {"bone": "torso", "default_attachment": "default", "offset": [-100.0, -110.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/torso.png"}}, "head_base": {"bone": "head", "default_attachment": "default", "offset": [-150.0, -200.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "head/head_base.png"}}, "eye_l_sclera": {"bone": "head", "default_attachment": "default", "offset": [-75.0, -95.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/sclera_left.png", "blink": "head/eyes/eyelid_blink.png", "happy": "head/eyes/eye_happy.png"}}, "eye_l_pupil": {"bone": "head", "default_attachment": "default", "offset": [-66.0, -82.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"default": "head/eyes/pupil.png"}}, "eye_r_sclera": {"bone": "head", "default_attachment": "default", "offset": [25.0, -95.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/sclera_right.png", "blink": "head/eyes/eyelid_blink.png", "happy": "head/eyes/eye_happy.png"}}, "eye_r_pupil": {"bone": "head", "default_attachment": "default", "offset": [34.0, -82.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"default": "head/eyes/pupil.png"}}, "eyebrow_l": {"bone": "head", "default_attachment": "default", "offset": [-70.0, -115.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 4, "attachments": {"default": "head/eyebrows/left.png"}}, "eyebrow_r": {"bone": "head", "default_attachment": "default", "offset": [30.0, -115.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 4, "attachments": {"default": "head/eyebrows/right.png"}}, "mouth": {"bone": "head", "default_attachment": "rest", "offset": [-40.0, -45.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 5, "attachments": {"rest": "head/mouth/rest.png", "A_I": "head/mouth/A_I.png", "E": "head/mouth/E.png", "O": "head/mouth/O.png", "U": "head/mouth/U.png", "M_B_P": "head/mouth/M_B_P.png", "F_V": "head/mouth/F_V.png", "L_D_T_N": "head/mouth/L_D_T_N.png", "W_Q": "head/mouth/W_Q.png"}}, "arm_l_up": {"bone": "arm_l_upper", "default_attachment": "default", "offset": [-30.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_l_low": {"bone": "arm_l_lower", "default_attachment": "default", "offset": [-30.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_l": {"bone": "hand_l", "default_attachment": "rest", "offset": [-35.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "arm_r_up": {"bone": "arm_r_upper", "default_attachment": "default", "offset": [-30.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_r_low": {"bone": "arm_r_lower", "default_attachment": "default", "offset": [-30.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_r": {"bone": "hand_r", "default_attachment": "rest", "offset": [-35.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "prop_r": {"bone": "prop_r", "default_attachment": "none", "offset": [-10.0, -140.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"none": "", "pointer_stick": "props/pointer_stick.png"}}}, "viseme_slot": "mouth", "visemes": {"rest": "rest", "A_I": "A_I", "E": "E", "O": "O", "U": "U", "M_B_P": "M_B_P", "F_V": "F_V", "L_D_T_N": "L_D_T_N", "W_Q": "W_Q"}, "default_palette": {}};
+        const ASSETS = {"body/torso.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADcCAYAAAA1H+4TAAAFgklEQVR4nO3dPW4bVxSGYcowwF2oS+EiQJDS2YT3kC0kq0i2kD14E3YZBEjhIh13oUqBCwM2IX4cS5yZc+59nlI/9Pzcd86MQFmHAwAAAAAAAAAAAAAAAAAAADzt7jCZ+ze/PO69Dd2dPn2YZt0MvaNi2M5p0GiG3Clh7Oc0WCjD7Iwo6jkNEEv7HRBGfafGobw6NCaOHu4b/2DkbrYDfnz7/rYbM6GHj++mmSatNvY5cQiiXjCnRpG02dDvjUMYtUM5NYmkxUYujUMUvWI5NYikxUP6THH8+9vfhxEcF5yPDg/v5Qu+dhBHCeM8jh///PkwyzQ5FZ4kpSfITHGM7HjlPFWeJGUDmS2O81urUW61ukdSMpDZ47j28a6ODSMpF4g4viWSfZULZKbJMatjo/P4qsv06HRQl1o6HUabItfOZ6VbrTKBiCMTyeSBzOS5i33ESKorEchs04M+t1olApkpjpdOgRGnyLHweS4dyGhutbhHjKSq3QOpMEa3cOtFPUsk9zuvj90D6Th2med8v5r56rCVta72psikE6Tq1aTiIh4pkmPB814ykFFstXhHiqQagUAgkEGu6qbIYIFcekCveB/aZbGOEMnxwvnf6wc6Jshgi3Tvf380AoFAIANevatsxwgEMuiirLY9XQlk4MVYdbs6EQgEAhn8Kl19+6oTyASLr8t2ViSQSRZdt+2tQiAQCGSiq3HX7d6TQCZbZN23f2sCmXBxjbIfWxAIBAKZ9Ko72v6sRSATL6ZR9+uWBDL5Ihp9/15KIBAIJJjl6jrLfj6HQC6YbdHMtr9LvV78lZMZ6e+U83wmCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgcCv3Bbw8PHdxc+N8HfjOxNIwSgufZ1YtieQomGk7xXKdjyDNIljjdfhOhNkI2lRf/r9n4ufe/PHTxdfzyRZn0B2jCOFcf41T4UikvUJZIc4loSxNBSRrMszSIM4rn2/Z5L1CGRDL43j1q/DdQJZydZXdVNkHQLZyK2v+qbINgQCgUA2uN1Z62p//rpus25PIBAIBAKBQCAQCAQCgUAgEMgKzt+Gfukt6y91/rre/n57AoFAIBu59RRZayrxLYGsZOvbHbdX6xDIhm511Tc9tiOQja/qL13cT32/6bEev3K7ss+L9/xNhF8W+fe8ifFSWOJYl0B2imRpKGniiGN9Atk5kufedoljG55BNnSrRS2O7ZggG/uyuJ/zy03C2J5AdvL1Yve/u9clkAJMhro8g0AgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAhUDOX36cPfUxx8+vtt+Yyjj4cL5v7Re1maCQCAQCAQC3QLxHDKnh4LPn7sGsteDF72cdlwnJSdI1asJ853v3QMxRai8PnYPBCp7fSg+do9v31/8HL0cG57LMg/J929+eVxyYCsfTJZZej73vr1qd4sljjE8NLrI7V7o0inCXE4FpsdnJTbiOZE8/vDX+hvDTd3992urONrdYn0hjp4eG17UygVy7erR8SCz/PxVmh4lA6l4kJj3vJcMpOrBYr7zXTaQygeNec5z6UBgbwKBQCAQCAQCgUDnQM5/wrH07QrUdHd2/ir/BKtFIE8RSU93DS9upev9mnf6judUfHq0miAdDibjnc82gXQ6qIxzHtts6Dm3XP2cGoUBAAAAAAAAHOb1PzPJ3jekaT56AAAAAElFTkSuQmCC", "head/head_base.png": "data:image/png;base64,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", "head/eyes/sclera_left.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAABiklEQVR4nO2aTXLDMAiF0TuIWLdXaI7fXqFdRxdJV53pOJaE/hHO28YD7zMoeGyIXtIlNyKof/t45K4JP19dc7uZ5kdCuZUAPYGgBaI1nhuV8P79Gf2N32/dq+OoI0TKfA1UKIBxPSBqAKRAQQgDDRCpOF54bqABogcMeidt1b0ybhbk7G6MgkjFz1UF2iBqYYpaaxZETT7Mmtq95CO+oLUapXkhoV4FEct/VpWmh0ZNwi5nI+czW5HVbSX1YbO1/CZtdeYXO7SVxI/N1tpZIGsgXtk0L53y9iqyu0BGBDIikBGBjAhkRCAjAhkRyIhA1kDC4fW95GPMCvHB159vexXZXaArgLCyc8IJPxi5jTBa4Z/fa7SWpvbijI8nkF3aKxx82m6toGzKc2SaV1VkFQwL80ZBtJ6VEPFVdEZmV4UL8qGUfhYMn+RJdUm2IitguBCi6e93FAxXxhWBxO5Gbxhu2NkSV2Q0TOvimbvkKqCp5czRX4FD5SBuemjsPf1DQ7zXSrm2JX+yol8mrc1y7s6LDAAAAABJRU5ErkJggg==", "head/eyes/eyelid_blink.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAAAtUlEQVR4nO3WQRKDMAhAUch4DvY9Q8/fM3Sfi9i9jU6Igdr2v6WTCRAwKgIAAAAAAAAAAGLp9oHd7mtrYX0+3tZmsY6civyIIv9WiO20N5p1xi1Xehc8tnm6Riu7K+aI1yzkqCtZxdhBnFZ+y5kgEWNogwelMzadUdDZWDorQE+wyH31ylev53BcI/GJgmrn2Lqu3+xvTHXEG04ssjt14MDSbpvojqtM5insW36HAAAAAACQfC/Wk0mcLPfiMwAAAABJRU5ErkJggg==", "head/eyes/eye_happy.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAAAqklEQVR4nO3VwRHCMAxEUUuF5E4N1E8NubuRcGdgsKJ1rIH/zhmtdpzErQEAgN9h6oHb7X6MPtv3hyzfrl5+VilbubyylFUqkCnkrWiJaJ5XLRHNtRklRl4J9UxTBCp+o9kcywxX3gPZTFcPzOpf5n7ay2eEZfUT8z16GrNLjOS82y90IleVkFyIq+6LqO1lT696GtHcUx97Rb56AQAAAAAAAAAAAADAP3gCh/FQHPCddnkAAAAASUVORK5CYII=", "head/eyes/pupil.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAoCAYAAACfKfiZAAABQUlEQVR4nO2Yyw3CMBBE41HOgRPQA1XQBnRBIXQBbVAFPQAnSANBQUKKgr2eXdsKB0YCKf7sm6zX+bnKoOZ463zt7W7ptLFcKjQk1ozLDdYaQUk4E8MxE5/bxVf/7HTPkglY4FK7NhOwwHOaQGpwrQnRQGMsOrffvH+Mxgykwi1GhiykQlOMFDMwNEIZaDzpZ/f5fLU2mfswIQ2KmWDgsSwgNjkE0Zy5ZKJmqt+a5ph6dtEiZIRQB7uNWIXioZpY+BuoJladO+DjelFtX5SC+45VBrrDOQk+bg/Fg+VlIpd69uRFCKlTswzSTUuKg/5PWoYUExL8w6zp6EYTMYEZpN0RmnlueMA8GzB3yRh4uORu3Mk+nvuMMGc8rre6Msq6LNEaaAtemHyxwQ4sAQ8ayG1CigXrxBzwXr//kUpjxpKxF5fsmBl4f/uaAAAAAElFTkSuQmCC", "head/eyes/sclera_right.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAABiklEQVR4nO2aTXLDMAiF0TuIWLdXaI7fXqFdRxdJV53pOJaE/hHO28YD7zMoeGyIXtIlNyKof/t45K4JP19dc7uZ5kdCuZUAPYGgBaI1nhuV8P79Gf2N32/dq+OoI0TKfA1UKIBxPSBqAKRAQQgDDRCpOF54bqABogcMeidt1b0ybhbk7G6MgkjFz1UF2iBqYYpaaxZETT7Mmtq95CO+oLUapXkhoV4FEct/VpWmh0ZNwi5nI+czW5HVbSX1YbO1/CZtdeYXO7SVxI/N1tpZIGsgXtk0L53y9iqyu0BGBDIikBGBjAhkRCAjAhkRyIhA1kDC4fW95GPMCvHB159vexXZXaArgLCyc8IJPxi5jTBa4Z/fa7SWpvbijI8nkF3aKxx82m6toGzKc2SaV1VkFQwL80ZBtJ6VEPFVdEZmV4UL8qGUfhYMn+RJdUm2IitguBCi6e93FAxXxhWBxO5Gbxhu2NkSV2Q0TOvimbvkKqCp5czRX4FD5SBuemjsPf1DQ7zXSrm2JX+yol8mrc1y7s6LDAAAAABJRU5ErkJggg==", "head/eyebrows/left.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAPCAYAAACWV43jAAAAVElEQVR4nGNgGAXDFMhpWv8H0SyDxSG4AMtgcQjdHChHpkOo7kBqOwQXYGQYBA55dP0oTncwDhaH0DWTPCLDITRx4CMqOoQiB9LDIYMmV44CBjoDABxFGKKhILWpAAAAAElFTkSuQmCC", "head/eyebrows/right.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAPCAYAAACWV43jAAAAWElEQVR4nGNgGAVUAnKa1v8ZBiFgJMaBj64fhasblA4cSIcz0iKKH1HR4TRxIDUdTlDDQDuckVxD6eVwRmobKkfltEy34kOOzFJiwMq3wV7+DtmajWHIAQB2+ycM2i/n/AAAAABJRU5ErkJggg==", "head/mouth/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAkklEQVR4nO3WvQ2DMBAGUDuDuM8MmT8z0LNIUkVKBxK674T0XkXF/fjOMAYAAAAAAAAcmKPIer4+v+d9e5fFOZtHVQ6zsnH/OpqYyGUmE081Mhk/ssKpRnbELJ2GdVDQ1eKq339G6zqlVF4bj1Fsb/wCJ+JHi1vBaUwdXPv/2d2nvXW9rja0+3oAAAAAAADGXXwBKy49CmtHvXoAAAAASUVORK5CYII=", "head/mouth/A_I.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABgUlEQVR4nO2aMU4DMRBFvRElNXRuUIpE4gQpOEVarrLiKrScIgUniBQKROMO6tQxshSklbXRbnb+zAT4r47G9vP3WNndEAghhBDiQ2MxSM45ByeaplFd40yz+H+AAoVQoBAKFEKBQihQCAUKoUBCCCGEEEImIHrYGBcrtwelaNLb6yQX/CcihAKFUKAQChRyFYA8fR7ENdb388HfvGzfxeO0t5jsiF/5xeomPlfiGGFoobW8qTcwPIHW4upaiGT+ih64BsqzqKsqMFXxH+ot2oscqo88vmoJbE9ItErIqXFQF0cXSMU0Yhetj9eY8aTpU+2BbWe3PXpTPa5G+gqwqqlnN7UmfS5980CkrwD/9Cv2PKHZ3dwFL5ZfH2ryCvCIJODkNEDPT+WMpQuVqDGvmcVklz3HyILuuFqbapKUeOyLlr3wR572aTC5JtNxEVZJtJJXMO9VcbHKmkks8ix7sFuz3z88wl9IXW+ezdfjflvuASI9xF2MwClCPYURQsJf4hu+r3Lhqe9ZQgAAAABJRU5ErkJggg==", "head/mouth/E.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAs0lEQVR4nO3Y0Q3DIAyEYYM6R3huVmjHb1ZIn2GRRJnBVxXH/zdAcpzAQpgBAAAAAAAAYRTlx5bn67AgxneTrL1awvKUeWvG8pS5a9byVPmL+ud9/9js2vqWzUTZDIxSnjqntMCMKNCJAp0e9uPhfHfsQCcKnOkI9yDXGOW4YQc6UaATBc5UYAtyjVHmLNlfY7yPq3WWl91/8eaXHOERtERFbtkMHMFKjJYXAAAAAAAAVwMn1dAwsfiWyosAAAAASUVORK5CYII=", "head/mouth/O.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABcElEQVR4nO2bTQrCMBBGk9Iz6C4bcaHgCTyH5yk5j+fwBIIuxE12eggVQUFqrbWTzg9+b2mbRJ8zCWmmzgEAAAA98U4hYba8frqW9htV39lbEadVpLcmTpvIwhmWl6M9FdF/L7T8+Hi6vH1WjQt1kei1yYsN4rqKlJDotciLHcR1EcktUXwO7CuP0s60wDDwpM+9qBQWU/dbe06JoikcM6WgZCqrmAMtwyYw1NIqd9TU++NKY0QgEQi0IDAI7Vc5xhWJwDjQqimxGiOFiUAgEQgkUjqFrBbTj9fW24PTRGlFXP0eLSJLK+K0iiwsysvZ3rxA64gIrB6P4nNFz7OftkOnofBS26rdaJJ9jPn5yH4+ghQmAoFWBCbm40au8RCBRCDQksD0klb1FZPKa3+c0wV7BKYBJErJu4MUtigwZYxCyehTVx+4+2F3IrHrUFniGxpOztpENkWsZJmvuEDrNdIqBD5Blf4fvicCAADuj7kBpt2XH0JN3/MAAAAASUVORK5CYII=", "head/mouth/U.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAA00lEQVR4nO3Zuw3CMBRGYTtL0LlnBoaLPBwz0LtjCYhSg6X4Afe/0flKcGEdXUcOhAAAAAAAAAC4EYOgdL29a9+Vx11qz9FLONWQS3AYr2f9qQOmzhgKEc2PQapEyM/Xx2frZZE7zlEtXv4S7khIq4gSR7glXsu6UwdMk59fVs9DmQnMjVOlMoUyAb0i4CACDiLgWQKulUvyrPW/YraLMvniy0U6HJ8qlenb8S7sPeDoW4T174ISZ6F0RrCOJxOwJ4ZCvJ3EJjz/JwIAAAAAAIDwRxsAE0kk7ShPdQAAAABJRU5ErkJggg==", "head/mouth/M_B_P.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAS0lEQVR4nO3QQQ3AIBBE0S1Ceq8G9KOBe42ACPawCe8JmGR+BAAAAAAAAEBpT/bg+/UVxf1zpP1uWUO3EvCQgIcEBAAAAAAAAKK2DebABAoB9TYzAAAAAElFTkSuQmCC", "head/mouth/F_V.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAkklEQVR4nO3YwRkBMRAG0Nl8OnBw40wJ6M2nky2GFjhz0wSKyCYb8V4BmeRP5jCJAAAAAACAGoaSi6+3h0804nm/FjnrUCO4x+0Sc9nsjkWDTFMu9o9Sz21bY3/FX+D59S5dYtb6WjiTADMJMNMiKhiX++iVF5hJgK238GnV9x2lX5k5p2KUa4zfGAAAAAAAooovXVMddWHww5MAAAAASUVORK5CYII=", "head/mouth/L_D_T_N.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABY0lEQVR4nO3ZMW7CMBTGcTtiK3s3bwxU6gkY2kuwtkeJOEpZuQQMnKADA+qSrZ3D2lQeIjEUCO/5vWfD91sDCf4nwZHjHAAAAAAAABTGaxyk67rOGfHei46xktz5PUBAJgRkQkAmBGRCQKaRy9Dh9f3ktof1h7u758Ch2pe3wc+L480yi99elRiP8vmbDtgSY+QQ0Txgy4xgHTHZJBKmM7OBUI/d7La++CuwdOYBn36+TL9ffEBOBOt42QSkxMghXuQl/8gX37+kfc2fJye3rT73pH3Wj5XIJJJsFm52W59qJqZGukaKeOK3cP3PWbcg+Tsq6bNaG0eUunV7yUfXZBRROl6kNrJaOaLW8cSWhMKZCYU6O3PDpb76ItE1tXBhVk4Z8tIVJxEvUlmUDAMfb64JOvQWlQrXU1vVDQarNdLxIvVl8aAQUiNcz/S9QkgYUzPasSxezFCCWgUDAAAAAADH9wdRn3JUfdV4PQAAAABJRU5ErkJggg==", "head/mouth/W_Q.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAtUlEQVR4nO3YsQ3CQAwF0AtiB7r0zMBwEcMxA306lgBESbiICBD2wXulo5OsH0vnpBQAAAAAAPiGriTVb3eXaW08HtL127UQXOYgu5aCyxjkqjQa3jvnPmldktqfzg+1YZPifd8J76ivTFEtvLl69BSGB7g0vKXPy78H2BoB/lqAw5OLIttFEt7NWNnl5kKq1aN3wbRrzJBs0uak6HJ8cYqip+8mvIEp38J/9jcGAAAAAICyzBXw4TO2hx3FzQAAAABJRU5ErkJggg==", "body/arm_upper.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAABkCAYAAADaIVPoAAABYElEQVR4nO3csVEDQQyF4f/+hC6c0wI0Qak0AS2Q0wURNHBnz7HatWeevtRejd6t0hW01lprrbU5Nha6PL/+Hv32/fWxpJftniHvEX57pKArgsuDhq2sMzVwdZPV9baVzT29vB/+9vP5tmS8NxaEvRb0TPCK0PJAYW/9v2K8ZaKzYUfPLQl8Ofjqo00fnR+9ZZmg6oZm3LSEceTw3nhV38pevZGxljASRsJIGAkjYSSMhJEwEkbCSBgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhHHk8N7z1lvvgM/aqzfyrFbCOKNo1S1XT0tJ4KPxGm326PzoK3GZ6L+hZ9xsaeBrX/1s87N3AGwUitryMHPZSOXGFilWvU6mup5MUNXkjF08G5PFbFt61H1arbXWWmus8gdx/HOaylcw6gAAAABJRU5ErkJggg==", "body/arm_lower.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAABkCAYAAADaIVPoAAABZklEQVR4nO3cvU0DQRRF4TNH1IFICCgBUQsRdRFRC6IEAhJEI6YCL2L2zVrWfV9sv5/dWXmTa2ittdZaa2uMvQVuH55OHOzn8316bq9t2b19vUTTCrP9PbJZtZk5RkWT0/0rRxlfL7ueafcOcOSyFf0kjISRMBJGwrjiZ2Klvf3GNb94zLxXe0STVWbm8MhmlWb7S5ib6oLfH2/VJbl7fC6rJWEkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBgJI2EkjISRMFZHaSoDGefqXexPD66RK4pW3eXq01Ky8LnjtXfYc9/fm4iThWaXXnFnSxfeuur/HX7r8xV5x0Ghv2K2WzG9vy5MVbhzUGxFtrgyySrFqmO21fVkgaohV2SUB4vNHPGVYezBgbaWv3TivLXWWmuNar/ZQ16ypfOOdgAAAABJRU5ErkJggg==", "body/hands/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAABJ0lEQVR4nO2ayw3CQAxEx1MI4koJiFqojloQJXBFNAL3SFH2Y2828rzzJuMXR4m0XkAIIYQQQsRgGMTpcvttrfm+n+H12N6So+VtNtFocZtVNErcMEj283ps3uN8vYdLG4JlS0RrxHulDUGyLaKl4j3S5i3rIVoi3irN2WXX7tv6geTsst7SjComAo8czvSvbaG2Hh6lu155PHJ3W+rikbrrkUskg62vzV7dXcsvfa2JZBDJIJJBJINIBpEMIhlEMli6cLnDsLXhFs0yv3QHhEgGey7eq8s9uaxZPGL200JNXewNG93l3jzWXjBbl2vroUfoqC575NDrqUZLe23Gs7WAkdKekwfrLSbVbCnl9DDlfDjlCYCUZzzSnuKZ+ZyWEEIIIQRG8QcD8J1EdqZflwAAAABJRU5ErkJggg==", "body/hands/wave.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAABq0lEQVR4nO2by23DMBBEJRWy4DUlBKnF1aWWICXkKqiRBDk4B0IjUiRnVwrmnfyhTeJ5SdFDe5qEEEIIIe7JzHhTe3n7zh/bvj7mq7SrYZkGYzuD23s8ql2IGCsM4vl8VLuQqWRZ5+vn+9/t9PqAr/Nsd2ZaDZ9K+eD27ke3CxPzH5AYgMQAJAYgMQCJAUgMQGIAEgOQGIDEACQGIDEAifEUk7IcBOUnUe3cM1+rSMp+M5KaAde2q+Vs9rt4S6kJkM62K9ESiLutMSsprSvJaT0lmFnVsnbEimfZm3KtQlwzXzaM/rrFWOO5DZvecS13rxZWv9rgMcTYwSFbBHn/PdNJFQOQGIDEACQGIDEAiQFIDEBiGGK27BvsyGCphZ5fUOWoYrzEpKCqGd1vt5itMxBiccmgKjlXDaO/IWK2i1XNiPHQFt/kVDWsfhbmp5TIchghOKViNkc5TCmu/z4ZlfAh0aPXOdqiaQexYougo8pjLP7Uq4kVMtcaQaWpyLoi0i+zRjx3Ym4T3PYfNlCQx77JfWNmHYI8N5KhO1arkHS1XbUQQgghhJjuyQ+e9NtbYB9nEQAAAABJRU5ErkJggg==", "body/hands/point.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAB0UlEQVR4nO2bTW6DMBBGcdVzWGxzhCpn6el6lqpH6Naai6TKIlLlMgQzP/a431sSwPDw2MOYLAsAAAB3kvQE+XK91dvo+1N83t4kTSEzCXqxktKy3xRicuPNRpWTpDdZvj7+7Le+vYcPq1OhtCdlb/uUYnLVW57dfP17tJAS9ZiZgRgGiGGAGAaIYYAYBohhgBgGiGGAGAaIYYAYBohheF06kgcuj7qKySdKD/UxXqLChVK+XG8etZ1wYh5Yy+k6xpQDJdCt+nEtxyK83MWUxnrw7/05SXdB2nJcQ6kIi+T347lzaIdWyDGmMII05YQU88BSTmgxlmtYh8VQNbjtzRZbv1suwlmsYYl6zMrIeSbNA6mc5NFgcVqyrR+IZApv7jHU2FjUdexToUQH5fSWIgmnZNFw6ShEK5xUXwlK0LCZMo+xAmIYIIYBYjzErJ0zXs32RWJo8C8xXTPf/4K6mLVTOGm3KxZDg4aT9LpUegw11mpGfqs2H2NWJzlW7aiJoY2nZC3H8j8L6uNDdnjj5oRrjnfJuw5SBIL2eqD2JJB6FomKcInWcmZMkRffyTBVMM98yejirfMn1+QsK/Qer4Sya9aaB/7UDAAAAAAALHPxA1jDvdFY4ZaQAAAAAElFTkSuQmCC", "body/hands/thumbs_up.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAB40lEQVR4nO2a32nDMBCHLZMBOsFh+tYRSmfpdJ2ldIS+FeEJMkFbHNBL0DmKdf8Ufh+EQBIs5fOdJd95mgAAAJiTNA9OL29/3Hfr96fq2L0kayGjCJo9pRz5/ZBi6OCfjCjnpD1A/vq4vM9Pz+n3/HMRsLy+T9ERixiqnPUipeXzaFEjfo25JaX1+4cVMzoQwwAxDBDDADEMEMMAMQwQwwAxDBDDADEMEMMAMV71mHuolR68Sp+hxLTIshJllkokVIjajmNR1Br2GkPKckKlUq5U9fbqw0WORnqpRcxyo+DdWhDfZJWXZfSImqbGgnhNyj01YE6qZOSoi2nlSHG8JkhKjmr7pJWjHQPNNoz7qpQ72yhabRiRsKOrs1Qmu3eBlf5D12P1plT3ck07oevZVNvm1SNHPJWykwzpcd2vMVHpEkPBGvGS8xONmOzcqJccH6nEADEMEMMAMQwQYyFmcX7oUHL8LjFr0IeXC6FuCR4FcTGLUzpJj9stZg2aTr3zmjUmsRhHjXQtxrVLEH0cMTFr5Sxpy9EshierW/0seOc7XPtEu9y5F4HSi0DyLBLlBkkt6aixMqovtaRY5dPcKqjvfFelyWvvn0w3ZyQQPVYbStddKzWIirqzBgAAAAAA01j8A9lrvJ5kcBi+AAAAAElFTkSuQmCC", "props/pointer_stick.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAACgCAYAAAAM0kxuAAABR0lEQVR4nO3aMU7DQBSEYe8o53Cfjp5jhIp7cAruQUWOQU+X3heBxkKe4PVuPIOEYP4q8r79slHszsPw2yutgfF4/3F9bbq8VfeVW6AeGHux2lxpDV2e3r9Bx+e76klxK7Z2fVzsW/3JW1hrHWvf0sLW5sZ5f/WEe8M/BqfFvXR9n9Vazk3z/uoJW2htHVvPZm3T1pNSlGd57RDoGerFfuRfPvQMnV9fvj6fHh7/yo3tCjZpLqAeDAYVUA8GgwqoB4NBBdSDwaAC6sFgUAH1YDCogHowGFRAPRgMKqAeDAYVUA8GgwqoB4NBBdSDwaAC6sFgUAH1YDCogHowGFRAPRgMKqAeDAYVUA8GgwqoB4NBBdSDwaAC6sFgUAH1YDCogHowGFRAPRgMKqAeDAYVUK9sLW69YFt7VxaDudIztDxp71u8adjdJ6WiSTFxnP5fAAAAAElFTkSuQmCC"};
+
+        // Preload images
+        const loadedImages = {};
+        for (const [relPath, b64] of Object.entries(ASSETS)) {
+            const img = new Image();
+            img.src = b64;
+            loadedImages[relPath] = img;
+        }
+
+        // Runtime Rig State
+        const state = {
+            joints: {
+                head: 0,
+                arm_l_upper: 0,
+                arm_l_lower: 0,
+                arm_r_upper: 0,
+                arm_r_lower: 0
+            },
+            attachments: {
+                hand_l: "rest",
+                hand_r: "rest",
+                eye_l_sclera: "default",
+                eye_r_sclera: "default",
+                prop_r: "none"
+            },
+            viseme: "rest",
+            gaze: { x: 0, y: 0 },
+            blink: 0,
+            simulatingSpeech: false,
+            time: 0
+        };
+
+        const canvas = document.getElementById("mascotCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Gaze tracking listener
+        canvas.addEventListener("mousemove", (e) => {
+            if (!document.getElementById("chk-gaze").checked) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = ((e.clientX - rect.left) / rect.width) * 800;
+            const mouseY = ((e.clientY - rect.top) / rect.height) * 800;
+            // Eye center is roughly at (400, 350)
+            state.gaze.x = Math.max(-12, Math.min(12, (mouseX - 400) * 0.05));
+            state.gaze.y = Math.max(-10, Math.min(10, (mouseY - 350) * 0.05));
+        });
+
+        function setViseme(v) {
+            state.viseme = v;
+            document.querySelectorAll('.section .btn').forEach(b => {
+                if (b.id && b.id.startsWith('v-')) b.classList.remove('active');
+            });
+            const btn = document.getElementById('v-' + v);
+            if (btn) btn.classList.add('active');
+        }
+
+        function applyPose(name) {
+            // Reset
+            state.joints = { head: 0, arm_l_upper: 0, arm_l_lower: 0, arm_r_upper: 0, arm_r_lower: 0 };
+            state.attachments = { hand_l: "rest", hand_r: "rest", eye_l_sclera: "default", eye_r_sclera: "default", prop_r: "none" };
+            setViseme("rest");
+
+            if (name === "point_stick") {
+                state.joints.head = -8;
+                state.joints.arm_r_upper = -45;
+                state.joints.arm_r_lower = 10;
+                state.attachments.hand_r = "point";
+                state.attachments.prop_r = "pointer_stick";
+                setViseme("A_I");
+            } else if (name === "happy_wave") {
+                state.joints.head = 10;
+                state.joints.arm_l_upper = -110;
+                state.joints.arm_l_lower = -30;
+                state.attachments.hand_l = "wave";
+                state.attachments.eye_l_sclera = "happy";
+                state.attachments.eye_r_sclera = "happy";
+                setViseme("E");
+            } else if (name === "thumbs_up") {
+                state.joints.arm_r_upper = -40;
+                state.joints.arm_r_lower = -45;
+                state.attachments.hand_r = "thumbs_up";
+                setViseme("O");
+            } else if (name === "thinking") {
+                state.joints.head = 15;
+                state.joints.arm_r_upper = -70;
+                state.joints.arm_r_lower = -80;
+                state.attachments.hand_r = "rest";
+                setViseme("U");
+            } else if (name === "surprised") {
+                state.joints.head = 0;
+                state.joints.arm_l_upper = -50;
+                state.joints.arm_r_upper = 50;
+                setViseme("O");
+            }
+            syncSliders();
+        }
+
+        function syncSliders() {
+            document.getElementById("sld-head").value = state.joints.head;
+            document.getElementById("val-head").innerText = state.joints.head + "°";
+            document.getElementById("sld-r-sh").value = state.joints.arm_r_upper;
+            document.getElementById("val-r-sh").innerText = state.joints.arm_r_upper + "°";
+            document.getElementById("sld-r-el").value = state.joints.arm_r_lower;
+            document.getElementById("val-r-el").innerText = state.joints.arm_r_lower + "°";
+            document.getElementById("sld-l-sh").value = state.joints.arm_l_upper;
+            document.getElementById("val-l-sh").innerText = state.joints.arm_l_upper + "°";
+            document.getElementById("sld-l-el").value = state.joints.arm_l_lower;
+            document.getElementById("val-l-el").innerText = state.joints.arm_l_lower + "°";
+        }
+
+        function onSliderChange() {
+            state.joints.head = parseFloat(document.getElementById("sld-head").value);
+            state.joints.arm_r_upper = parseFloat(document.getElementById("sld-r-sh").value);
+            state.joints.arm_r_lower = parseFloat(document.getElementById("sld-r-el").value);
+            state.joints.arm_l_upper = parseFloat(document.getElementById("sld-l-sh").value);
+            state.joints.arm_l_lower = parseFloat(document.getElementById("sld-l-el").value);
+            syncSliders();
+        }
+
+        let speechTimer = null;
+        function toggleSpeechSim() {
+            state.simulatingSpeech = !state.simulatingSpeech;
+            const btn = document.getElementById("speech-btn-label");
+            if (state.simulatingSpeech) {
+                btn.innerText = "⏹ Stop Simulation";
+                const phonemes = ["rest", "A_I", "E", "O", "M_B_P", "L_D_T_N", "F_V", "A_I", "W_Q", "rest"];
+                let pIdx = 0;
+                speechTimer = setInterval(() => {
+                    setViseme(phonemes[pIdx % phonemes.length]);
+                    pIdx++;
+                }, 140);
+            } else {
+                btn.innerText = "▶ Play Lip-Sync Audio Simulation";
+                clearInterval(speechTimer);
+                setViseme("rest");
+            }
+        }
+
+        // 2D Matrix Transforms
+        function computeTransforms() {
+            const transforms = {};
+            const worldBones = {};
+
+            // Recursive transform propagation
+            function solveBone(boneName) {
+                if (transforms[boneName]) return transforms[boneName];
+                const cfg = MANIFEST.bones[boneName];
+                let parentMat = [1, 0, 0, 1, 0, 0]; // Identity
+                if (cfg.parent) {
+                    parentMat = solveBone(cfg.parent);
+                }
+
+                // Local transform
+                const pos = cfg.position;
+                const rotDeg = (cfg.rotation_deg || 0) + (state.joints[boneName] || 0);
+                const rotRad = (rotDeg * Math.PI) / 180;
+                const pivot = cfg.pivot || [0, 0];
+
+                // Procedural breathing on torso
+                let extraY = 0;
+                if (boneName === "torso" && document.getElementById("chk-breathe").checked) {
+                    extraY = Math.sin(state.time * 2.5) * 4;
+                }
+
+                // Compose TRS
+                // Translate(pos + pivot) * Rotate(rad) * Translate(-pivot)
+                const c = Math.cos(rotRad);
+                const s = Math.sin(rotRad);
+                
+                // Local Matrix
+                const a = c;
+                const b = s;
+                const d = -s;
+                const e = c;
+                const tx = pos[0] + pivot[0] - (c * pivot[0] - s * pivot[1]);
+                const ty = pos[1] + extraY + pivot[1] - (s * pivot[0] + c * pivot[1]);
+
+                // Multiply parentMat * localMat
+                const pa = parentMat[0], pb = parentMat[1], pd = parentMat[2], pe = parentMat[3], ptx = parentMat[4], pty = parentMat[5];
+                const outA = pa * a + pd * b;
+                const outB = pb * a + pe * b;
+                const outD = pa * d + pd * e;
+                const outE = pb * d + pe * e;
+                const outTx = pa * tx + pd * ty + ptx;
+                const outTy = pb * tx + pe * ty + pty;
+
+                transforms[boneName] = [outA, outB, outD, outE, outTx, outTy];
+                return transforms[boneName];
+            }
+
+            for (const bName of Object.keys(MANIFEST.bones)) {
+                solveBone(bName);
+            }
+            return transforms;
+        }
+
+        // Main Animation & Render Loop (60fps)
+        function loop() {
+            state.time += 0.016;
+
+            // Auto-blink logic
+            if (document.getElementById("chk-blink").checked) {
+                const blinkCycle = state.time % 3.5;
+                if (blinkCycle > 3.35) {
+                    state.blink = 1;
+                } else {
+                    state.blink = 0;
+                }
+            }
+
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const scale = canvas.width / MANIFEST.canvas_size[0];
+
+            ctx.save();
+            ctx.scale(scale, scale);
+
+            const boneTransforms = computeTransforms();
+
+            // Collect slots
+            const slotList = [];
+            for (const [slotName, slotCfg] of Object.entries(MANIFEST.slots)) {
+                const bone = MANIFEST.bones[slotCfg.bone];
+                const z = (bone.z_index || 0) * 1000 + (slotCfg.z_index || 0);
+                slotList.push({ name: slotName, cfg: slotCfg, z: z });
+            }
+            slotList.sort((a, b) => a.z - b.z);
+
+            for (const slot of slotList) {
+                const sName = slot.name;
+                const cfg = slot.cfg;
+                const mat = boneTransforms[cfg.bone];
+
+                // Determine active attachment
+                let attKey = cfg.default_attachment || "default";
+                if (sName === MANIFEST.viseme_slot) {
+                    attKey = MANIFEST.visemes[state.viseme] || "rest";
+                } else if (state.attachments[sName]) {
+                    attKey = state.attachments[sName];
+                }
+
+                // Eyelid blink override
+                if ((sName === "eye_l_sclera" || sName === "eye_r_sclera") && state.blink === 1) {
+                    attKey = "blink";
+                }
+
+                const relPath = cfg.attachments[attKey];
+                if (!relPath || !loadedImages[relPath]) continue;
+
+                const img = loadedImages[relPath];
+
+                ctx.save();
+                // Apply 2D Matrix: a, b, d, e, tx, ty
+                ctx.transform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
+
+                // Pupil gaze offset
+                let px = 0, py = 0;
+                if (sName.includes("pupil")) {
+                    px = state.gaze.x;
+                    py = state.gaze.y;
+                }
+
+                ctx.drawImage(img, cfg.offset[0] + px, cfg.offset[1] + py);
+                ctx.restore();
+            }
+
+            // Draw skeleton gizmos if enabled
+            if (document.getElementById("chk-skeleton").checked) {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "#38bdf8";
+                ctx.fillStyle = "#f43f5e";
+
+                for (const [bName, cfg] of Object.entries(MANIFEST.bones)) {
+                    const mat = boneTransforms[bName];
+                    const x = mat[4];
+                    const y = mat[5];
+
+                    if (cfg.parent) {
+                        const pMat = boneTransforms[cfg.parent];
+                        ctx.beginPath();
+                        ctx.moveTo(pMat[4], pMat[5]);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        // Start
+        loop();
+    </script>
+</body>
+</html>
