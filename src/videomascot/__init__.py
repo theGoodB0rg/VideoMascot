@@ -5,9 +5,16 @@ from videomascot.core.bones import Bone, BoneHierarchy, solve_2joint_ik, solve_p
 from videomascot.core.slots import Slot
 from videomascot.models.manifest import MascotManifest, BoneConfig, SlotConfig
 from videomascot.models.pose import PoseState
+from videomascot.models.schema import MascotActionSchema, MascotPlacementSchema, MascotProceduralConfig, SpeechCue, MascotStoryConfig
 from videomascot.compositor.sprite_engine import SpriteCompositor
+from videomascot.compositor.stream_engine import StreamEngine
+from videomascot.animation.procedural import ProceduralLifeEngine
+from videomascot.animation.lipsync import LipSyncEngine
+from videomascot.animation.sequencer import MascotSequencer
+from videomascot.pipeline.video_overlay import VideoOverlayCompositor
+from videomascot.engine import MascotEngine
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     "Vector2D",
     "Transform2D",
@@ -24,5 +31,16 @@ __all__ = [
     "BoneConfig",
     "SlotConfig",
     "PoseState",
+    "MascotActionSchema",
+    "MascotPlacementSchema",
+    "MascotProceduralConfig",
+    "SpeechCue",
+    "MascotStoryConfig",
     "SpriteCompositor",
+    "StreamEngine",
+    "ProceduralLifeEngine",
+    "LipSyncEngine",
+    "MascotSequencer",
+    "VideoOverlayCompositor",
+    "MascotEngine",
 ]
