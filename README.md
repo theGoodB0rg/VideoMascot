@@ -140,6 +140,19 @@ compositor.overlay_onto_video(
 )
 ```
 
+## 📚 Documentation & Guides
+
+Comprehensive guides and architectural references are available in the [`/docs/`](docs/index.md) folder:
+
+* **[Getting Started](docs/getting_started.md)**: Installation, prerequisites, quickstart, and demo generation.
+* **[Declarative Schema Guide](docs/schema_guide.md)**: Reference for YAML/JSON directives (emotions, gestures, placements, speech cues).
+* **[Animation & 9-Viseme Lip-Sync](docs/animation_and_lipsync.md)**: Preston Blair mouth sets, WebVTT/EdgeTTS speech sync, and procedural breathing.
+* **[Rigging & Kinematics](docs/rigging_and_kinematics.md)**: 2.5D bone hierarchy, 3x3 affine transforms, and 2-joint analytical IK/FK solvers.
+* **[Custom Mascot Guide](docs/custom_mascot_guide.md)**: Tutorial for creating, slicing, and rigging new character bundles.
+* **[Video Pipeline Integration](docs/video_pipeline_integration.md)**: In-memory zero-disk FFmpeg streaming and automated pipeline bridges.
+* **[Testing & Quality Assurance](docs/testing_and_qa.md)**: TDD principles, alpha integrity testing, and test suite execution.
+* **[Changelog](CHANGELOG.md)**: Release history and version notes.
+
 ---
 
 ## License
