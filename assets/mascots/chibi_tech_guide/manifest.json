@@ -2,7 +2,7 @@
   "id": "chibi_tech_guide",
   "name": "Chibi Tech Guide",
   "version": "1.0.0",
-  "description": "High-resolution, beautifully shaded 2.5D modular tech mascot.",
+  "description": "High-resolution, anatomically anchored 2.5D modular tech mascot with seamless neck overlap.",
   "canvas_size": [
     800,
     800
@@ -38,8 +38,8 @@
         1.0
       ],
       "pivot": [
-        100.0,
-        110.0
+        0.0,
+        0.0
       ],
       "length": 0.0,
       "z_index": 10
@@ -48,7 +48,7 @@
       "parent": "torso",
       "position": [
         0.0,
-        -130.0
+        -85.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -56,8 +56,8 @@
         1.0
       ],
       "pivot": [
-        150.0,
-        200.0
+        0.0,
+        0.0
       ],
       "length": 0.0,
       "z_index": 20
@@ -65,8 +65,8 @@
     "arm_l_upper": {
       "parent": "torso",
       "position": [
-        -80.0,
-        -60.0
+        -65.0,
+        -55.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -74,8 +74,8 @@
         1.0
       ],
       "pivot": [
-        30.0,
-        20.0
+        0.0,
+        0.0
       ],
       "length": 70.0,
       "z_index": 5
@@ -92,8 +92,8 @@
         1.0
       ],
       "pivot": [
-        30.0,
-        15.0
+        0.0,
+        0.0
       ],
       "length": 70.0,
       "z_index": 6
@@ -110,8 +110,8 @@
         1.0
       ],
       "pivot": [
-        35.0,
-        20.0
+        0.0,
+        0.0
       ],
       "length": 0.0,
       "z_index": 7
@@ -119,8 +119,8 @@
     "arm_r_upper": {
       "parent": "torso",
       "position": [
-        80.0,
-        -60.0
+        65.0,
+        -55.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -128,8 +128,8 @@
         1.0
       ],
       "pivot": [
-        30.0,
-        20.0
+        0.0,
+        0.0
       ],
       "length": 70.0,
       "z_index": 15
@@ -146,8 +146,8 @@
         1.0
       ],
       "pivot": [
-        30.0,
-        15.0
+        0.0,
+        0.0
       ],
       "length": 70.0,
       "z_index": 16
@@ -164,8 +164,8 @@
         1.0
       ],
       "pivot": [
-        35.0,
-        20.0
+        0.0,
+        0.0
       ],
       "length": 0.0,
       "z_index": 17
@@ -182,8 +182,8 @@
         1.0
       ],
       "pivot": [
-        10.0,
-        140.0
+        0.0,
+        0.0
       ],
       "length": 0.0,
       "z_index": 18
@@ -194,8 +194,8 @@
       "bone": "torso",
       "default_attachment": "default",
       "offset": [
-        -100.0,
-        -110.0
+        -110.0,
+        -120.0
       ],
       "scale": [
         1.0,
@@ -212,7 +212,7 @@
       "default_attachment": "default",
       "offset": [
         -150.0,
-        -200.0
+        -240.0
       ],
       "scale": [
         1.0,
@@ -229,7 +229,7 @@
       "default_attachment": "default",
       "offset": [
         -75.0,
-        -95.0
+        -135.0
       ],
       "scale": [
         1.0,
@@ -248,7 +248,7 @@
       "default_attachment": "default",
       "offset": [
         -66.0,
-        -82.0
+        -122.0
       ],
       "scale": [
         1.0,
@@ -265,7 +265,7 @@
       "default_attachment": "default",
       "offset": [
         25.0,
-        -95.0
+        -135.0
       ],
       "scale": [
         1.0,
@@ -284,7 +284,7 @@
       "default_attachment": "default",
       "offset": [
         34.0,
-        -82.0
+        -122.0
       ],
       "scale": [
         1.0,
@@ -301,7 +301,7 @@
       "default_attachment": "default",
       "offset": [
         -70.0,
-        -115.0
+        -155.0
       ],
       "scale": [
         1.0,
@@ -318,7 +318,7 @@
       "default_attachment": "default",
       "offset": [
         30.0,
-        -115.0
+        -155.0
       ],
       "scale": [
         1.0,
@@ -335,7 +335,7 @@
       "default_attachment": "rest",
       "offset": [
         -40.0,
-        -45.0
+        -85.0
       ],
       "scale": [
         1.0,
@@ -467,8 +467,8 @@
       "bone": "prop_r",
       "default_attachment": "none",
       "offset": [
-        -10.0,
-        -140.0
+        -12.0,
+        -160.0
       ],
       "scale": [
         1.0,

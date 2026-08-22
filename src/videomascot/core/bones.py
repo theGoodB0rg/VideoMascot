@@ -133,11 +133,49 @@ def solve_2joint_ik(
     return (math.degrees(shoulder_angle), math.degrees(elbow_angle))
 
 
-def solve_pointing_fk(aim_angle_deg: float, bend_ratio: float = 0.05) -> Tuple[float, float]:
-    """Forward Kinematics solver for natural pointing at a specific angular trajectory.
+def solve_pointing_fk(
+    aim_angle_deg: float,
+    is_right_arm: bool = True,
+    bend_ratio: float = 0.05
+) -> Tuple[float, float]:
+    """Forward Kinematics solver for natural pointing at a target angle.
     
-    Splits the aim angle naturally between shoulder and elbow so the arm looks relaxed.
+    Coordinate convention:
+    - 0 deg: Horizontal forward (pointing right for right arm, left for left arm)
+    - +45 deg: Pointing Upwards & Outwards (towards top corner)
+    - -45 deg: Pointing Downwards & Outwards
+    - +90 deg: Pointing Straight Up
+    
+    Since the rest sprite hangs vertically down (270 deg / -90 deg from horizontal):
+    We map the requested aim angle into proper joint rotation offsets relative to vertical rest.
     """
-    elbow_bend = aim_angle_deg * bend_ratio
-    shoulder_angle = aim_angle_deg - elbow_bend * 0.5
+    if is_right_arm:
+        # Vertical down rest is -90 deg relative to horizontal.
+        # To reach aim_angle_deg, we rotate by (aim_angle_deg + 90) counter-clockwise (in screen space).
+        total_rot = -(aim_angle_deg + 90.0)
+    else:
+        # Left arm
+        total_rot = (aim_angle_deg + 90.0)
+        
+    elbow_bend = total_rot * bend_ratio
+    shoulder_angle = total_rot - elbow_bend * 0.5
     return (shoulder_angle, elbow_bend)
+
+
+def solve_aim_to_target(
+    shoulder_world_pos: Vector2D,
+    target_world_pos: Vector2D,
+    is_right_arm: bool = True
+) -> Tuple[float, float]:
+    """Calculates shoulder and elbow rotation angles to aim directly at a screen coordinate."""
+    diff = target_world_pos - shoulder_world_pos
+    # Screen angle (in degrees): 0 deg is right (+X), 90 deg is down (+Y) in screen coords
+    # Convert to mathematical angle (0 deg right, 90 deg up)
+    math_angle_deg = math.degrees(math.atan2(-diff.y, diff.x))
+    
+    if not is_right_arm:
+        # For left arm, 0 deg is left (-X)
+        math_angle_deg = math.degrees(math.atan2(-diff.y, -diff.x))
+        
+    return solve_pointing_fk(aim_angle_deg=math_angle_deg, is_right_arm=is_right_arm)
+

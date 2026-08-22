@@ -1,7 +1,7 @@
 import math
 import pytest
 from videomascot.core.math_2d import Vector2D, Transform2D
-from videomascot.core.bones import Bone, BoneHierarchy, solve_2joint_ik, solve_pointing_fk
+from videomascot.core.bones import Bone, BoneHierarchy, solve_2joint_ik, solve_pointing_fk, solve_aim_to_target
 
 
 def test_bone_hierarchy_transform_propagation():
@@ -73,8 +73,19 @@ def test_solve_2joint_ik_reach():
 
 
 def test_solve_pointing_fk():
-    # Aiming at angle 30 degrees above horizontal with a slightly relaxed arm
-    angle_shoulder, angle_elbow = solve_pointing_fk(aim_angle_deg=30.0, bend_ratio=0.1)
+    # Aiming at angle +45 deg (upwards and outwards)
+    angle_shoulder, angle_elbow = solve_pointing_fk(aim_angle_deg=45.0, is_right_arm=True, bend_ratio=0.1)
     
-    # Should point straight along aim angle with subtle natural bend
-    assert pytest.approx(angle_shoulder + angle_elbow * 0.5, abs=5.0) == 30.0
+    # Total rotation from vertical rest (-90 deg) to +45 deg is -135 deg
+    assert pytest.approx(angle_shoulder + angle_elbow * 0.5) == -135.0
+
+
+def test_solve_aim_to_target():
+    # Shoulder at (480, 480), Target at (700, 260) -> pointing up-right
+    shoulder = Vector2D(480.0, 480.0)
+    target = Vector2D(700.0, 260.0)
+    
+    sh_angle, el_angle = solve_aim_to_target(shoulder, target, is_right_arm=True)
+    # Target is at dx = 220, dy = -220 (45 degrees up-right) -> aim angle +45 deg
+    assert pytest.approx(sh_angle + el_angle * 0.5) == -135.0
+
