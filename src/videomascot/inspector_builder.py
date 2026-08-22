@@ -165,7 +165,7 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
 <body>
 
     <div id="viewport-container">
-        <div id="badge-status">🎮 Live Rig: <span style="color:#38bdf8;" id="char-name">Chibi Tech Guide</span> • Gaze Tracker Active</div>
+        <div id="badge-status">🎮 Live Rig: <span style="color:#38bdf8;" id="char-name">Chibi Tech Guide</span> • Target Gaze & Pointer</div>
         <canvas id="mascotCanvas" width="600" height="600"></canvas>
     </div>
 
@@ -177,9 +177,10 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
 
         <!-- Quick Poses -->
         <div class="section">
-            <div class="section-title">Quick Actions & Poses</div>
+            <div class="section-title">Character Poses & Actions</div>
             <div class="btn-grid" style="grid-template-columns: repeat(2, 1fr);">
-                <button class="btn" onclick="applyPose('point_stick')">👉 Point Stick</button>
+                <button class="btn" onclick="applyPose('point_up_right')">👉 Point Up-Right</button>
+                <button class="btn" onclick="applyPose('point_up_left')">👈 Point Up-Left</button>
                 <button class="btn" onclick="applyPose('happy_wave')">👋 Wave Hello</button>
                 <button class="btn" onclick="applyPose('thumbs_up')">👍 Thumbs Up</button>
                 <button class="btn" onclick="applyPose('thinking')">🤔 Thinking</button>
@@ -188,11 +189,21 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
             </div>
         </div>
 
+        <!-- Emotional Expressions -->
+        <div class="section">
+            <div class="section-title">Facial Expressions <span class="badge">Mood</span></div>
+            <div class="btn-grid">
+                <button class="btn active" id="e-smile" onclick="setEmotion('smile')">😊 Smile</button>
+                <button class="btn" id="e-open_smile" onclick="setEmotion('open_smile')">😃 Open Smile</button>
+                <button class="btn" id="e-happy_eyes" onclick="setEmotion('happy_eyes')">✨ Happy ^^</button>
+            </div>
+        </div>
+
         <!-- Viseme Pad -->
         <div class="section">
-            <div class="section-title">Preston Blair 9 Visemes <span class="badge">Lip-Sync</span></div>
+            <div class="section-title">Speech Visemes (9-Set) <span class="badge">Lip-Sync</span></div>
             <div class="btn-grid">
-                <button class="btn active" id="v-rest" onclick="setViseme('rest')">/rest/</button>
+                <button class="btn" id="v-smile" onclick="setViseme('smile')">/smile/</button>
                 <button class="btn" id="v-A_I" onclick="setViseme('A_I')">/A_I/</button>
                 <button class="btn" id="v-E" onclick="setViseme('E')">/E/</button>
                 <button class="btn" id="v-O" onclick="setViseme('O')">/O/</button>
@@ -211,11 +222,11 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
         <div class="section">
             <div class="section-title">Procedural Physics & FX</div>
             <div class="toggle-row">
-                <span>Dynamic Gaze Tracking</span>
+                <span>Dynamic Mouse Gaze Tracking</span>
                 <input type="checkbox" id="chk-gaze" checked>
             </div>
             <div class="toggle-row">
-                <span>Breathing / Bobbing</span>
+                <span>Breathing / Subtle Bob</span>
                 <input type="checkbox" id="chk-breathe" checked>
             </div>
             <div class="toggle-row">
@@ -244,7 +255,7 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                 <input type="range" id="sld-r-el" min="-150" max="150" value="0" oninput="onSliderChange()">
             </div>
             <div class="control-group">
-                <div class="control-label"><span>Left Shoulder</span><span class="val" id="val-l-sh">0°</span></div>
+                <div class="control-label"><span>Left Shoulder (Wave)</span><span class="val" id="val-l-sh">0°</span></div>
                 <input type="range" id="sld-l-sh" min="-180" max="180" value="0" oninput="onSliderChange()">
             </div>
             <div class="control-group">
@@ -273,7 +284,8 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                 arm_l_upper: 0,
                 arm_l_lower: 0,
                 arm_r_upper: 0,
-                arm_r_lower: 0
+                arm_r_lower: 0,
+                torso: 0
             }},
             attachments: {{
                 hand_l: "rest",
@@ -282,7 +294,7 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                 eye_r_sclera: "default",
                 prop_r: "none"
             }},
-            viseme: "rest",
+            viseme: "smile",
             gaze: {{ x: 0, y: 0 }},
             blink: 0,
             simulatingSpeech: false,
@@ -298,9 +310,8 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
             const rect = canvas.getBoundingClientRect();
             const mouseX = ((e.clientX - rect.left) / rect.width) * 800;
             const mouseY = ((e.clientY - rect.top) / rect.height) * 800;
-            // Eye center is roughly at (400, 350)
-            state.gaze.x = Math.max(-12, Math.min(12, (mouseX - 400) * 0.05));
-            state.gaze.y = Math.max(-10, Math.min(10, (mouseY - 350) * 0.05));
+            state.gaze.x = Math.max(-10, Math.min(10, (mouseX - 400) * 0.04));
+            state.gaze.y = Math.max(-8, Math.min(8, (mouseY - 350) * 0.04));
         }});
 
         function setViseme(v) {{
@@ -312,43 +323,89 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
             if (btn) btn.classList.add('active');
         }}
 
-        function applyPose(name) {{
-            // Reset
-            state.joints = {{ head: 0, arm_l_upper: 0, arm_l_lower: 0, arm_r_upper: 0, arm_r_lower: 0 }};
-            state.attachments = {{ hand_l: "rest", hand_r: "rest", eye_l_sclera: "default", eye_r_sclera: "default", prop_r: "none" }};
-            setViseme("rest");
+        function setEmotion(em) {{
+            document.querySelectorAll('.section .btn').forEach(b => {{
+                if (b.id && b.id.startsWith('e-')) b.classList.remove('active');
+            }});
+            const btn = document.getElementById('e-' + em);
+            if (btn) btn.classList.add('active');
 
-            if (name === "point_stick") {{
-                state.joints.head = -8;
-                state.joints.arm_r_upper = -45;
-                state.joints.arm_r_lower = 10;
+            if (em === "smile") {{
+                state.viseme = "smile";
+                state.attachments.eye_l_sclera = "default";
+                state.attachments.eye_r_sclera = "default";
+            }} else if (em === "open_smile") {{
+                state.viseme = "open_smile";
+                state.attachments.eye_l_sclera = "default";
+                state.attachments.eye_r_sclera = "default";
+            }} else if (em === "happy_eyes") {{
+                state.viseme = "open_smile";
+                state.attachments.eye_l_sclera = "happy";
+                state.attachments.eye_r_sclera = "happy";
+            }}
+        }}
+
+        function applyPose(name) {{
+            // Reset to defaults
+            state.joints = {{ head: 0, arm_l_upper: 0, arm_l_lower: 0, arm_r_upper: 0, arm_r_lower: 0, torso: 0 }};
+            state.attachments = {{ hand_l: "rest", hand_r: "rest", eye_l_sclera: "default", eye_r_sclera: "default", prop_r: "none" }};
+            state.viseme = "smile";
+
+            if (name === "point_up_right") {{
+                state.joints.torso = -3;
+                state.joints.head = 6;
+                // Right arm raises up-right towards target
+                state.joints.arm_r_upper = -135;
+                state.joints.arm_r_lower = 15;
                 state.attachments.hand_r = "point";
                 state.attachments.prop_r = "pointer_stick";
-                setViseme("A_I");
-            }} else if (name === "happy_wave") {{
-                state.joints.head = 10;
-                state.joints.arm_l_upper = -110;
+                // Left arm on hip
+                state.joints.arm_l_upper = 25;
                 state.joints.arm_l_lower = -30;
+                state.viseme = "smile";
+            }} else if (name === "point_up_left") {{
+                state.joints.torso = 3;
+                state.joints.head = -6;
+                // Left arm raises up-left towards target
+                state.joints.arm_l_upper = 135;
+                state.joints.arm_l_lower = -15;
+                state.attachments.hand_l = "point";
+                // Right arm on hip
+                state.joints.arm_r_upper = -25;
+                state.joints.arm_r_lower = 30;
+                state.viseme = "smile";
+            }} else if (name === "happy_wave") {{
+                state.joints.head = 8;
+                // Left arm raises high outside the body (+125 deg)
+                state.joints.arm_l_upper = 125;
+                state.joints.arm_l_lower = 25;
                 state.attachments.hand_l = "wave";
                 state.attachments.eye_l_sclera = "happy";
                 state.attachments.eye_r_sclera = "happy";
-                setViseme("E");
+                state.viseme = "open_smile";
             }} else if (name === "thumbs_up") {{
-                state.joints.arm_r_upper = -40;
-                state.joints.arm_r_lower = -45;
+                state.joints.head = -4;
+                state.joints.arm_r_upper = -50;
+                state.joints.arm_r_lower = -55;
                 state.attachments.hand_r = "thumbs_up";
-                setViseme("O");
+                state.viseme = "open_smile";
             }} else if (name === "thinking") {{
-                state.joints.head = 15;
-                state.joints.arm_r_upper = -70;
-                state.joints.arm_r_lower = -80;
+                state.joints.head = 12;
+                state.joints.arm_r_upper = -115;
+                state.joints.arm_r_lower = -90;
                 state.attachments.hand_r = "rest";
-                setViseme("U");
+                state.viseme = "smile";
             }} else if (name === "surprised") {{
                 state.joints.head = 0;
-                state.joints.arm_l_upper = -50;
-                state.joints.arm_r_upper = 50;
-                setViseme("O");
+                state.joints.arm_l_upper = 70;
+                state.joints.arm_l_lower = 40;
+                state.joints.arm_r_upper = -70;
+                state.joints.arm_r_lower = -40;
+                state.attachments.hand_l = "wave";
+                state.attachments.hand_r = "wave";
+                state.viseme = "O";
+            }} else if (name === "rest") {{
+                state.viseme = "smile";
             }}
             syncSliders();
         }}
@@ -381,25 +438,23 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
             const btn = document.getElementById("speech-btn-label");
             if (state.simulatingSpeech) {{
                 btn.innerText = "⏹ Stop Simulation";
-                const phonemes = ["rest", "A_I", "E", "O", "M_B_P", "L_D_T_N", "F_V", "A_I", "W_Q", "rest"];
+                const phonemes = ["smile", "A_I", "E", "O", "M_B_P", "L_D_T_N", "F_V", "open_smile", "W_Q", "smile"];
                 let pIdx = 0;
                 speechTimer = setInterval(() => {{
                     setViseme(phonemes[pIdx % phonemes.length]);
                     pIdx++;
-                }}, 140);
+                }}, 130);
             }} else {{
                 btn.innerText = "▶ Play Lip-Sync Audio Simulation";
                 clearInterval(speechTimer);
-                setViseme("rest");
+                setViseme("smile");
             }}
         }}
 
         // 2D Matrix Transforms
         function computeTransforms() {{
             const transforms = {{}};
-            const worldBones = {{}};
 
-            // Recursive transform propagation
             function solveBone(boneName) {{
                 if (transforms[boneName]) return transforms[boneName];
                 const cfg = MANIFEST.bones[boneName];
@@ -408,24 +463,19 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                     parentMat = solveBone(cfg.parent);
                 }}
 
-                // Local transform
                 const pos = cfg.position;
                 const rotDeg = (cfg.rotation_deg || 0) + (state.joints[boneName] || 0);
                 const rotRad = (rotDeg * Math.PI) / 180;
                 const pivot = cfg.pivot || [0, 0];
 
-                // Procedural breathing on torso
                 let extraY = 0;
                 if (boneName === "torso" && document.getElementById("chk-breathe").checked) {{
-                    extraY = Math.sin(state.time * 2.5) * 4;
+                    extraY = Math.sin(state.time * 2.5) * 3;
                 }}
 
-                // Compose TRS
-                // Translate(pos + pivot) * Rotate(rad) * Translate(-pivot)
                 const c = Math.cos(rotRad);
                 const s = Math.sin(rotRad);
                 
-                // Local Matrix
                 const a = c;
                 const b = s;
                 const d = -s;
@@ -433,7 +483,6 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                 const tx = pos[0] + pivot[0] - (c * pivot[0] - s * pivot[1]);
                 const ty = pos[1] + extraY + pivot[1] - (s * pivot[0] + c * pivot[1]);
 
-                // Multiply parentMat * localMat
                 const pa = parentMat[0], pb = parentMat[1], pd = parentMat[2], pe = parentMat[3], ptx = parentMat[4], pty = parentMat[5];
                 const outA = pa * a + pd * b;
                 const outB = pb * a + pe * b;
@@ -456,7 +505,6 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
         function loop() {{
             state.time += 0.016;
 
-            // Auto-blink logic
             if (document.getElementById("chk-blink").checked) {{
                 const blinkCycle = state.time % 3.5;
                 if (blinkCycle > 3.35) {{
@@ -479,7 +527,6 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
 
             const boneTransforms = computeTransforms();
 
-            // Collect slots
             const slotList = [];
             for (const [slotName, slotCfg] of Object.entries(MANIFEST.slots)) {{
                 const bone = MANIFEST.bones[slotCfg.bone];
@@ -493,15 +540,13 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                 const cfg = slot.cfg;
                 const mat = boneTransforms[cfg.bone];
 
-                // Determine active attachment
                 let attKey = cfg.default_attachment || "default";
                 if (sName === MANIFEST.viseme_slot) {{
-                    attKey = MANIFEST.visemes[state.viseme] || "rest";
+                    attKey = MANIFEST.visemes[state.viseme] || state.viseme || "smile";
                 }} else if (state.attachments[sName]) {{
                     attKey = state.attachments[sName];
                 }}
 
-                // Eyelid blink override
                 if ((sName === "eye_l_sclera" || sName === "eye_r_sclera") && state.blink === 1) {{
                     attKey = "blink";
                 }}
@@ -512,10 +557,8 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
                 const img = loadedImages[relPath];
 
                 ctx.save();
-                // Apply 2D Matrix: a, b, d, e, tx, ty
                 ctx.transform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
 
-                // Pupil gaze offset
                 let px = 0, py = 0;
                 if (sName.includes("pupil")) {{
                     px = state.gaze.x;
@@ -554,7 +597,6 @@ def generate_html_inspector(bundle_dir: Path, output_file: Path) -> Path:
             ctx.restore();
         }}
 
-        // Start
         loop();
     </script>
 </body>

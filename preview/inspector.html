@@ -133,7 +133,7 @@
 <body>
 
     <div id="viewport-container">
-        <div id="badge-status">🎮 Live Rig: <span style="color:#38bdf8;" id="char-name">Chibi Tech Guide</span> • Gaze Tracker Active</div>
+        <div id="badge-status">🎮 Live Rig: <span style="color:#38bdf8;" id="char-name">Chibi Tech Guide</span> • Target Gaze & Pointer</div>
         <canvas id="mascotCanvas" width="600" height="600"></canvas>
     </div>
 
@@ -145,9 +145,10 @@
 
         <!-- Quick Poses -->
         <div class="section">
-            <div class="section-title">Quick Actions & Poses</div>
+            <div class="section-title">Character Poses & Actions</div>
             <div class="btn-grid" style="grid-template-columns: repeat(2, 1fr);">
-                <button class="btn" onclick="applyPose('point_stick')">👉 Point Stick</button>
+                <button class="btn" onclick="applyPose('point_up_right')">👉 Point Up-Right</button>
+                <button class="btn" onclick="applyPose('point_up_left')">👈 Point Up-Left</button>
                 <button class="btn" onclick="applyPose('happy_wave')">👋 Wave Hello</button>
                 <button class="btn" onclick="applyPose('thumbs_up')">👍 Thumbs Up</button>
                 <button class="btn" onclick="applyPose('thinking')">🤔 Thinking</button>
@@ -156,11 +157,21 @@
             </div>
         </div>
 
+        <!-- Emotional Expressions -->
+        <div class="section">
+            <div class="section-title">Facial Expressions <span class="badge">Mood</span></div>
+            <div class="btn-grid">
+                <button class="btn active" id="e-smile" onclick="setEmotion('smile')">😊 Smile</button>
+                <button class="btn" id="e-open_smile" onclick="setEmotion('open_smile')">😃 Open Smile</button>
+                <button class="btn" id="e-happy_eyes" onclick="setEmotion('happy_eyes')">✨ Happy ^^</button>
+            </div>
+        </div>
+
         <!-- Viseme Pad -->
         <div class="section">
-            <div class="section-title">Preston Blair 9 Visemes <span class="badge">Lip-Sync</span></div>
+            <div class="section-title">Speech Visemes (9-Set) <span class="badge">Lip-Sync</span></div>
             <div class="btn-grid">
-                <button class="btn active" id="v-rest" onclick="setViseme('rest')">/rest/</button>
+                <button class="btn" id="v-smile" onclick="setViseme('smile')">/smile/</button>
                 <button class="btn" id="v-A_I" onclick="setViseme('A_I')">/A_I/</button>
                 <button class="btn" id="v-E" onclick="setViseme('E')">/E/</button>
                 <button class="btn" id="v-O" onclick="setViseme('O')">/O/</button>
@@ -179,11 +190,11 @@
         <div class="section">
             <div class="section-title">Procedural Physics & FX</div>
             <div class="toggle-row">
-                <span>Dynamic Gaze Tracking</span>
+                <span>Dynamic Mouse Gaze Tracking</span>
                 <input type="checkbox" id="chk-gaze" checked>
             </div>
             <div class="toggle-row">
-                <span>Breathing / Bobbing</span>
+                <span>Breathing / Subtle Bob</span>
                 <input type="checkbox" id="chk-breathe" checked>
             </div>
             <div class="toggle-row">
@@ -212,7 +223,7 @@
                 <input type="range" id="sld-r-el" min="-150" max="150" value="0" oninput="onSliderChange()">
             </div>
             <div class="control-group">
-                <div class="control-label"><span>Left Shoulder</span><span class="val" id="val-l-sh">0°</span></div>
+                <div class="control-label"><span>Left Shoulder (Wave)</span><span class="val" id="val-l-sh">0°</span></div>
                 <input type="range" id="sld-l-sh" min="-180" max="180" value="0" oninput="onSliderChange()">
             </div>
             <div class="control-group">
@@ -223,8 +234,8 @@
     </div>
 
     <script>
-        const MANIFEST = {"id": "chibi_tech_guide", "name": "Chibi Tech Guide", "version": "1.0.0", "description": "High-resolution, anatomically anchored 2.5D modular tech mascot with seamless neck overlap.", "canvas_size": [800, 800], "bones": {"root": {"parent": null, "position": [400.0, 700.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 0}, "torso": {"parent": "root", "position": [0.0, -220.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 10}, "head": {"parent": "torso", "position": [0.0, -85.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 20}, "arm_l_upper": {"parent": "torso", "position": [-65.0, -55.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 5}, "arm_l_lower": {"parent": "arm_l_upper", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 6}, "hand_l": {"parent": "arm_l_lower", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 7}, "arm_r_upper": {"parent": "torso", "position": [65.0, -55.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 15}, "arm_r_lower": {"parent": "arm_r_upper", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 16}, "hand_r": {"parent": "arm_r_lower", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 17}, "prop_r": {"parent": "hand_r", "position": [0.0, 10.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 18}}, "slots": {"torso": {"bone": "torso", "default_attachment": "default", "offset": [-110.0, -120.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/torso.png"}}, "head_base": {"bone": "head", "default_attachment": "default", "offset": [-150.0, -240.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "head/head_base.png"}}, "eye_l_sclera": {"bone": "head", "default_attachment": "default", "offset": [-75.0, -135.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/sclera_left.png", "blink": "head/eyes/eyelid_blink.png", "happy": "head/eyes/eye_happy.png"}}, "eye_l_pupil": {"bone": "head", "default_attachment": "default", "offset": [-66.0, -122.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"default": "head/eyes/pupil.png"}}, "eye_r_sclera": {"bone": "head", "default_attachment": "default", "offset": [25.0, -135.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/sclera_right.png", "blink": "head/eyes/eyelid_blink.png", "happy": "head/eyes/eye_happy.png"}}, "eye_r_pupil": {"bone": "head", "default_attachment": "default", "offset": [34.0, -122.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"default": "head/eyes/pupil.png"}}, "eyebrow_l": {"bone": "head", "default_attachment": "default", "offset": [-70.0, -155.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 4, "attachments": {"default": "head/eyebrows/left.png"}}, "eyebrow_r": {"bone": "head", "default_attachment": "default", "offset": [30.0, -155.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 4, "attachments": {"default": "head/eyebrows/right.png"}}, "mouth": {"bone": "head", "default_attachment": "rest", "offset": [-40.0, -85.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 5, "attachments": {"rest": "head/mouth/rest.png", "A_I": "head/mouth/A_I.png", "E": "head/mouth/E.png", "O": "head/mouth/O.png", "U": "head/mouth/U.png", "M_B_P": "head/mouth/M_B_P.png", "F_V": "head/mouth/F_V.png", "L_D_T_N": "head/mouth/L_D_T_N.png", "W_Q": "head/mouth/W_Q.png"}}, "arm_l_up": {"bone": "arm_l_upper", "default_attachment": "default", "offset": [-30.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_l_low": {"bone": "arm_l_lower", "default_attachment": "default", "offset": [-30.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_l": {"bone": "hand_l", "default_attachment": "rest", "offset": [-35.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "arm_r_up": {"bone": "arm_r_upper", "default_attachment": "default", "offset": [-30.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_r_low": {"bone": "arm_r_lower", "default_attachment": "default", "offset": [-30.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_r": {"bone": "hand_r", "default_attachment": "rest", "offset": [-35.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "prop_r": {"bone": "prop_r", "default_attachment": "none", "offset": [-12.0, -160.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"none": "", "pointer_stick": "props/pointer_stick.png"}}}, "viseme_slot": "mouth", "visemes": {"rest": "rest", "A_I": "A_I", "E": "E", "O": "O", "U": "U", "M_B_P": "M_B_P", "F_V": "F_V", "L_D_T_N": "L_D_T_N", "W_Q": "W_Q"}, "default_palette": {}};
-        const ASSETS = {"body/torso.png": "data:image/png;base64,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", "head/head_base.png": "data:image/png;base64,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", "head/eyes/sclera_left.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAABiklEQVR4nO2aTXLDMAiF0TuIWLdXaI7fXqFdRxdJV53pOJaE/hHO28YD7zMoeGyIXtIlNyKof/t45K4JP19dc7uZ5kdCuZUAPYGgBaI1nhuV8P79Gf2N32/dq+OoI0TKfA1UKIBxPSBqAKRAQQgDDRCpOF54bqABogcMeidt1b0ybhbk7G6MgkjFz1UF2iBqYYpaaxZETT7Mmtq95CO+oLUapXkhoV4FEct/VpWmh0ZNwi5nI+czW5HVbSX1YbO1/CZtdeYXO7SVxI/N1tpZIGsgXtk0L53y9iqyu0BGBDIikBGBjAhkRCAjAhkRyIhA1kDC4fW95GPMCvHB159vexXZXaArgLCyc8IJPxi5jTBa4Z/fa7SWpvbijI8nkF3aKxx82m6toGzKc2SaV1VkFQwL80ZBtJ6VEPFVdEZmV4UL8qGUfhYMn+RJdUm2IitguBCi6e93FAxXxhWBxO5Gbxhu2NkSV2Q0TOvimbvkKqCp5czRX4FD5SBuemjsPf1DQ7zXSrm2JX+yol8mrc1y7s6LDAAAAABJRU5ErkJggg==", "head/eyes/eyelid_blink.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAAAtUlEQVR4nO3WQRKDMAhAUch4DvY9Q8/fM3Sfi9i9jU6Igdr2v6WTCRAwKgIAAAAAAAAAAGLp9oHd7mtrYX0+3tZmsY6civyIIv9WiO20N5p1xi1Xehc8tnm6Riu7K+aI1yzkqCtZxdhBnFZ+y5kgEWNogwelMzadUdDZWDorQE+wyH31ylev53BcI/GJgmrn2Lqu3+xvTHXEG04ssjt14MDSbpvojqtM5insW36HAAAAAACQfC/Wk0mcLPfiMwAAAABJRU5ErkJggg==", "head/eyes/eye_happy.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAAAqklEQVR4nO3VwRHCMAxEUUuF5E4N1E8NubuRcGdgsKJ1rIH/zhmtdpzErQEAgN9h6oHb7X6MPtv3hyzfrl5+VilbubyylFUqkCnkrWiJaJ5XLRHNtRklRl4J9UxTBCp+o9kcywxX3gPZTFcPzOpf5n7ay2eEZfUT8z16GrNLjOS82y90IleVkFyIq+6LqO1lT696GtHcUx97Rb56AQAAAAAAAAAAAADAP3gCh/FQHPCddnkAAAAASUVORK5CYII=", "head/eyes/pupil.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAoCAYAAACfKfiZAAABQUlEQVR4nO2Yyw3CMBBE41HOgRPQA1XQBnRBIXQBbVAFPQAnSANBQUKKgr2eXdsKB0YCKf7sm6zX+bnKoOZ463zt7W7ptLFcKjQk1ozLDdYaQUk4E8MxE5/bxVf/7HTPkglY4FK7NhOwwHOaQGpwrQnRQGMsOrffvH+Mxgykwi1GhiykQlOMFDMwNEIZaDzpZ/f5fLU2mfswIQ2KmWDgsSwgNjkE0Zy5ZKJmqt+a5ph6dtEiZIRQB7uNWIXioZpY+BuoJladO+DjelFtX5SC+45VBrrDOQk+bg/Fg+VlIpd69uRFCKlTswzSTUuKg/5PWoYUExL8w6zp6EYTMYEZpN0RmnlueMA8GzB3yRh4uORu3Mk+nvuMMGc8rre6Msq6LNEaaAtemHyxwQ4sAQ8ayG1CigXrxBzwXr//kUpjxpKxF5fsmBl4f/uaAAAAAElFTkSuQmCC", "head/eyes/sclera_right.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAABiklEQVR4nO2aTXLDMAiF0TuIWLdXaI7fXqFdRxdJV53pOJaE/hHO28YD7zMoeGyIXtIlNyKof/t45K4JP19dc7uZ5kdCuZUAPYGgBaI1nhuV8P79Gf2N32/dq+OoI0TKfA1UKIBxPSBqAKRAQQgDDRCpOF54bqABogcMeidt1b0ybhbk7G6MgkjFz1UF2iBqYYpaaxZETT7Mmtq95CO+oLUapXkhoV4FEct/VpWmh0ZNwi5nI+czW5HVbSX1YbO1/CZtdeYXO7SVxI/N1tpZIGsgXtk0L53y9iqyu0BGBDIikBGBjAhkRCAjAhkRyIhA1kDC4fW95GPMCvHB159vexXZXaArgLCyc8IJPxi5jTBa4Z/fa7SWpvbijI8nkF3aKxx82m6toGzKc2SaV1VkFQwL80ZBtJ6VEPFVdEZmV4UL8qGUfhYMn+RJdUm2IitguBCi6e93FAxXxhWBxO5Gbxhu2NkSV2Q0TOvimbvkKqCp5czRX4FD5SBuemjsPf1DQ7zXSrm2JX+yol8mrc1y7s6LDAAAAABJRU5ErkJggg==", "head/eyebrows/left.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAPCAYAAACWV43jAAAAVElEQVR4nGNgGAXDFMhpWv8H0SyDxSG4AMtgcQjdHChHpkOo7kBqOwQXYGQYBA55dP0oTncwDhaH0DWTPCLDITRx4CMqOoQiB9LDIYMmV44CBjoDABxFGKKhILWpAAAAAElFTkSuQmCC", "head/eyebrows/right.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAPCAYAAACWV43jAAAAWElEQVR4nGNgGAVUAnKa1v8ZBiFgJMaBj64fhasblA4cSIcz0iKKH1HR4TRxIDUdTlDDQDuckVxD6eVwRmobKkfltEy34kOOzFJiwMq3wV7+DtmajWHIAQB2+ycM2i/n/AAAAABJRU5ErkJggg==", "head/mouth/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAkklEQVR4nO3WvQ2DMBAGUDuDuM8MmT8z0LNIUkVKBxK674T0XkXF/fjOMAYAAAAAAAAcmKPIer4+v+d9e5fFOZtHVQ6zsnH/OpqYyGUmE081Mhk/ssKpRnbELJ2GdVDQ1eKq339G6zqlVF4bj1Fsb/wCJ+JHi1vBaUwdXPv/2d2nvXW9rja0+3oAAAAAAADGXXwBKy49CmtHvXoAAAAASUVORK5CYII=", "head/mouth/A_I.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABgUlEQVR4nO2aMU4DMRBFvRElNXRuUIpE4gQpOEVarrLiKrScIgUniBQKROMO6tQxshSklbXRbnb+zAT4r47G9vP3WNndEAghhBDiQ2MxSM45ByeaplFd40yz+H+AAoVQoBAKFEKBQihQCAUKoUBCCCGEEEImIHrYGBcrtwelaNLb6yQX/CcihAKFUKAQChRyFYA8fR7ENdb388HfvGzfxeO0t5jsiF/5xeomPlfiGGFoobW8qTcwPIHW4upaiGT+ih64BsqzqKsqMFXxH+ot2oscqo88vmoJbE9ItErIqXFQF0cXSMU0Yhetj9eY8aTpU+2BbWe3PXpTPa5G+gqwqqlnN7UmfS5980CkrwD/9Cv2PKHZ3dwFL5ZfH2ryCvCIJODkNEDPT+WMpQuVqDGvmcVklz3HyILuuFqbapKUeOyLlr3wR572aTC5JtNxEVZJtJJXMO9VcbHKmkks8ix7sFuz3z88wl9IXW+ezdfjflvuASI9xF2MwClCPYURQsJf4hu+r3Lhqe9ZQgAAAABJRU5ErkJggg==", "head/mouth/E.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAs0lEQVR4nO3Y0Q3DIAyEYYM6R3huVmjHb1ZIn2GRRJnBVxXH/zdAcpzAQpgBAAAAAAAAYRTlx5bn67AgxneTrL1awvKUeWvG8pS5a9byVPmL+ud9/9js2vqWzUTZDIxSnjqntMCMKNCJAp0e9uPhfHfsQCcKnOkI9yDXGOW4YQc6UaATBc5UYAtyjVHmLNlfY7yPq3WWl91/8eaXHOERtERFbtkMHMFKjJYXAAAAAAAAVwMn1dAwsfiWyosAAAAASUVORK5CYII=", "head/mouth/O.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABcElEQVR4nO2bTQrCMBBGk9Iz6C4bcaHgCTyH5yk5j+fwBIIuxE12eggVQUFqrbWTzg9+b2mbRJ8zCWmmzgEAAAA98U4hYba8frqW9htV39lbEadVpLcmTpvIwhmWl6M9FdF/L7T8+Hi6vH1WjQt1kei1yYsN4rqKlJDotciLHcR1EcktUXwO7CuP0s60wDDwpM+9qBQWU/dbe06JoikcM6WgZCqrmAMtwyYw1NIqd9TU++NKY0QgEQi0IDAI7Vc5xhWJwDjQqimxGiOFiUAgEQgkUjqFrBbTj9fW24PTRGlFXP0eLSJLK+K0iiwsysvZ3rxA64gIrB6P4nNFz7OftkOnofBS26rdaJJ9jPn5yH4+ghQmAoFWBCbm40au8RCBRCDQksD0klb1FZPKa3+c0wV7BKYBJErJu4MUtigwZYxCyehTVx+4+2F3IrHrUFniGxpOztpENkWsZJmvuEDrNdIqBD5Blf4fvicCAADuj7kBpt2XH0JN3/MAAAAASUVORK5CYII=", "head/mouth/U.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAA00lEQVR4nO3Zuw3CMBRGYTtL0LlnBoaLPBwz0LtjCYhSg6X4Afe/0flKcGEdXUcOhAAAAAAAAAC4EYOgdL29a9+Vx11qz9FLONWQS3AYr2f9qQOmzhgKEc2PQapEyM/Xx2frZZE7zlEtXv4S7khIq4gSR7glXsu6UwdMk59fVs9DmQnMjVOlMoUyAb0i4CACDiLgWQKulUvyrPW/YraLMvniy0U6HJ8qlenb8S7sPeDoW4T174ISZ6F0RrCOJxOwJ4ZCvJ3EJjz/JwIAAAAAAIDwRxsAE0kk7ShPdQAAAABJRU5ErkJggg==", "head/mouth/M_B_P.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAS0lEQVR4nO3QQQ3AIBBE0S1Ceq8G9KOBe42ACPawCe8JmGR+BAAAAAAAAEBpT/bg+/UVxf1zpP1uWUO3EvCQgIcEBAAAAAAAAKK2DebABAoB9TYzAAAAAElFTkSuQmCC", "head/mouth/F_V.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAkklEQVR4nO3YwRkBMRAG0Nl8OnBw40wJ6M2nky2GFjhz0wSKyCYb8V4BmeRP5jCJAAAAAACAGoaSi6+3h0804nm/FjnrUCO4x+0Sc9nsjkWDTFMu9o9Sz21bY3/FX+D59S5dYtb6WjiTADMJMNMiKhiX++iVF5hJgK238GnV9x2lX5k5p2KUa4zfGAAAAAAAooovXVMddWHww5MAAAAASUVORK5CYII=", "head/mouth/L_D_T_N.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABY0lEQVR4nO3ZMW7CMBTGcTtiK3s3bwxU6gkY2kuwtkeJOEpZuQQMnKADA+qSrZ3D2lQeIjEUCO/5vWfD91sDCf4nwZHjHAAAAAAAABTGaxyk67rOGfHei46xktz5PUBAJgRkQkAmBGRCQKaRy9Dh9f3ktof1h7u758Ch2pe3wc+L480yi99elRiP8vmbDtgSY+QQ0Txgy4xgHTHZJBKmM7OBUI/d7La++CuwdOYBn36+TL9ffEBOBOt42QSkxMghXuQl/8gX37+kfc2fJye3rT73pH3Wj5XIJJJsFm52W59qJqZGukaKeOK3cP3PWbcg+Tsq6bNaG0eUunV7yUfXZBRROl6kNrJaOaLW8cSWhMKZCYU6O3PDpb76ItE1tXBhVk4Z8tIVJxEvUlmUDAMfb64JOvQWlQrXU1vVDQarNdLxIvVl8aAQUiNcz/S9QkgYUzPasSxezFCCWgUDAAAAAADH9wdRn3JUfdV4PQAAAABJRU5ErkJggg==", "head/mouth/W_Q.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAtUlEQVR4nO3YsQ3CQAwF0AtiB7r0zMBwEcMxA306lgBESbiICBD2wXulo5OsH0vnpBQAAAAAAPiGriTVb3eXaW08HtL127UQXOYgu5aCyxjkqjQa3jvnPmldktqfzg+1YZPifd8J76ivTFEtvLl69BSGB7g0vKXPy78H2BoB/lqAw5OLIttFEt7NWNnl5kKq1aN3wbRrzJBs0uak6HJ8cYqip+8mvIEp38J/9jcGAAAAAICyzBXw4TO2hx3FzQAAAABJRU5ErkJggg==", "body/arm_upper.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAABkCAYAAADaIVPoAAABoUlEQVR4nO3cvVHDQBDF8b/eeIYuPKTOHOMmaIYqaIYmTOzMKUMXRDAEREj+0O2tBW9/oaQ73dOend1CKaWUUkrpYyDRerP7nLr3ftynrGW4ZchbhB+ygx6fDr+ubZ63acEHksKOBb0keHRosZCwU8/N+UmkBV43hM0KrSWFzQitiEmit13P94hO5lY3any3wOuk6ka9T3Rw9/CyqHlStvRSKXp7RVdlbL6WbS062e7fbjp+ijCjnpPPrVKv6qZU+NrF9wybtqUvDdE77LcVSX7CHHb3k/cyrEiWGW5M/Uv/d8KMMCPMCDPCjDAjzAgzwowwI8wIM8KMMCPMCDPCjDAjzAgzwowwI8wIM8KMMCPMCDPCjDAjzAgzwowwI8wIM8KMMCPMCDPCjDAjzAgzwowwI8yoZfDY6e2P18emBV0yX8upcWFGPSaNqnL0bgkJPLW9Whc7Nb61CYLoaG7oHpUNDXzqq1+7+FPPR7S4GAh07pjrqaO25z5MVD+PgWA9jshHNi8RwaI7qyy+U0vkIv9MLx7LbktL7adVSimllEKWLwKxky2OuZ9MAAAAAElFTkSuQmCC", "body/arm_lower.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAABkCAYAAADaIVPoAAABaElEQVR4nO3cvU0DQRRF4TNH1IFICCgBUQsRdRFRC6IEAhJEI6YCL2L2zVrWfV9sv5/dsbSWfA2ttdZaa22NsbfA7cPTiYP9fL5Pz+21Lbu3r5doWmG2v0c2qzYzx6hocrp/5Sjj62XXZ9q9Axy5bEU/CSNhJIyEkTASRsJIGFc8+ay0t9+45mfpma+KHtFklZk5PLJZpdn+EuamuuD3x1t1Se4en8tqSRgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBircweVv14/V+9if3pwjVxRtOouV5+WkoXPHa+9w557/974kCw0u/SKO1u68NZV/+/wW6+vCIcNCv2VSdzKNP11YaqScINiK4KYlbE/KVadSayuJwtUDbki0DlYbOaIr0yuDg60tfyl47mttdZaa1T7BdGpXrK3cFQzAAAAAElFTkSuQmCC", "body/hands/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAABJ0lEQVR4nO2ayw3CQAxEx1MI4koJiFqojloQJXBFNAL3SFH2Y2828rzzJuMXR4m0XkAIIYQQQsRgGMTpcvttrfm+n+H12N6So+VtNtFocZtVNErcMEj283ps3uN8vYdLG4JlS0RrxHulDUGyLaKl4j3S5i3rIVoi3irN2WXX7tv6geTsst7SjComAo8czvSvbaG2Hh6lu155PHJ3W+rikbrrkUskg62vzV7dXcsvfa2JZBDJIJJBJINIBpEMIhlEMli6cLnDsLXhFs0yv3QHhEgGey7eq8s9uaxZPGL200JNXewNG93l3jzWXjBbl2vroUfoqC575NDrqUZLe23Gs7WAkdKekwfrLSbVbCnl9DDlfDjlCYCUZzzSnuKZ+ZyWEEIIIQRG8QcD8J1EdqZflwAAAABJRU5ErkJggg==", "body/hands/wave.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAABtElEQVR4nO2bS3LCMBBEjQ4ypW2OkMpZcrqcJZUjZOvyRZJiQRYudRDW9IxM9VvxEZZ4eGBowbIIIYQQs3BhHNRe3n72t23fn5dZxvVQFmessbjW7VnjUsTYnUXc7s8al1JKtpt8/fr4u1xf3+HjIsc9UlbupbRfXOt69rg0Mc+AxAAkBiAxAIkBSAxAYgASA5AYgMQAJAYgMQCJAUhMpJi6y0FQfpI1LjzztYMxYotrltLzxK7hU8+8j2a/7mG43VnkLTzySOt6ORKIh4lZG2la60n3juvl6C5BiJh1IGJEtGQdlZCyS7ASpKDjer7HlTNKiZBTziqFLSdk+4QNY75hMeZY156Mrquc/WxhzavvSgwxNmkZeayvPEMZMeZXKQEkBiAxAIkBSAxAYiLEVIe0bZb5h8RsjsEQg5H1qZSixNSkcvKed1jMNmk5ja4rZMONDWO+wnp1apAc1m6B2xmzJchhbqG4ltIWKOdU+0oIbzkRZRr2Ry6PMOk/Id6fjtSPWuvc4B85O1jtAr0HMWIuzOyhwpozcxQU0VSGd602ICiyy05t543wSyghhBBCCCGWFr/hE+Hfe/awpwAAAABJRU5ErkJggg==", "body/hands/point.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAABuElEQVR4nO2bwY3CMBBFkxV1jHKlBEQtWx21IErgGrkRVhyyQpbH64SZ753w3wmi4CgvHsfxD8NACCEEzmjZmBzPj3xbul9Nj4Fi9BISXdAXQsqa/XYhRlaebCQ5B+sG59vl9/N0+h6isrnHSOHqv0opfdd+t8sxpiahtv1jxOwNilGgGAWKUaAYBYpRoBgFilGgGAWKUaAYBYpRoBgFilGgGAWKQS1t7iVd6CJGVixvvu6LlBSqlOR4fqDWjEOJWUDI6TrG/LVYXotfFjle5dVFzNyYHLRkVE9BHnLClNJ8u6hCPUorjBh0ThVODCrhNBMzKWOAV37tLWezmFQY8HIJJSmWpeBZVuZ3pSnwGw5mpZRW3iY9rnDeplU5vT3GpEY50d56MCmldL+O2pWKJsR95jsHFRJ6HoOAYhQoxltMyu5OqPlMfhyrJ232mB5iJude49m+qZjU8PxkRaldywUr8x6TAHK8pUDHmMlIDmpQd8tppPIwt2VWXBPisebrGmBJw5Pu1pRgwSslgCR74rBY7Z1KQsaYZHwSiKgWHpjLG70HmV13/Z+i/OO3HQghhBBCCCHDJ/MD9jmhjfcK6QAAAAAASUVORK5CYII=", "body/hands/thumbs_up.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAB30lEQVR4nO2aUWrDMAyGk7AD7AQi7G1HKDtLT7ezjB1hb8P4BDvBNlbIS7EyN/4l2eX/oBSSUjtfpMSRMk2EEGLHbPjfkzy//Gj78seb6ditzN5CRhG0REo58vshxcjBg+xRzoP1AOn99fK9PD7N31+fFwHr6Tz1DixipHDWNyk123uLGvg15j8ptfvvVszoUIwCxShQjALFKFCMAsUoUIwCxShQjALFKFCMAsUoUExUoeoWSjWZqJpwV2JqZHmJckslAVXo/v7Ho9o37DVGjOWYpdJ6Ou+WL0sF8dLv9wrnmxyL9IJFTC5MTjuoWinb9u3jGT1Q09IwwVuK45pwZOR0ISYd7BiUBKHkmPaVamhpo1j2p0L7SgnQW7LqT0HCTq7OUkQz7TqtWlOqOWKks9Yqal7wVEpBrVf0uMOufK1Z7jGNEPODRkwKfoMBOT5TSYFiFChGgWIUKMZDzBr8NiZy/CYxudO3uhHzYyp5iVmD0gk9brOY3Gk6hZcdSpPwjhp0Lcb0GrM6ybEaJ6R9gsKyGD57Peon4JPvcO2TmjpIi6C9CETfBObIIlGqkFSTjhZ3RvNbrRhW+SyXCuYr32w0eev1k+viTADR47WgDF21SoWoXlfWhBBCCCFkGotfuKW+6LgJHFMAAAAASUVORK5CYII=", "props/pointer_stick.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAC0CAYAAACOqextAAABWElEQVR4nO2cO47CMBQAScQN6KFOt/2WHAEq7sEp9h5U7BEo6bejhp4zgBBkZeXjcUgkQJop/ez3/IbEVPFo9OlkqROnxfelOnY67HF99kziLoWyPolTCmWpyQ/rv9q84ucLi4ybCjQlns/ODbFJa6GSPLb7WPJwPOyu2n2tQFuSZ+N5bPe0OCzS1gV20BcLdFMUviS3Z3t3vD/nxG1e+C6EefA32EERitcKVLuIJSnH23afdFQUj8XlsdAUi/Ga03TI/4O8z+KUeKcOfreb//HFcjVMB32xAKIiREWIihAVISpCVISoCFERoiJERYiKEBUhKkJUhKgIURGiIkRFiIoQFSEqQlSEqAhREaIiREWIihAVISpCVISoCFERoiJERYiKEBUhKkJUhKgIURGiIkRFiIoQFSEqQlSEqAhREaKiYa4ymEa+LqUPP/O3uYyh2knKRQzyHlwBfE9nK16TcuAAAAAASUVORK5CYII="};
+        const MANIFEST = {"id": "chibi_tech_guide", "name": "Chibi Tech Guide", "version": "1.0.0", "description": "High-resolution 2.5D modular tech mascot with friendly appeal and full dual-arm articulation.", "canvas_size": [800, 800], "bones": {"root": {"parent": null, "position": [400.0, 700.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 0}, "torso": {"parent": "root", "position": [0.0, -220.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 10}, "head": {"parent": "torso", "position": [0.0, -85.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 20}, "arm_l_upper": {"parent": "torso", "position": [-65.0, -55.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 14}, "arm_l_lower": {"parent": "arm_l_upper", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 15}, "hand_l": {"parent": "arm_l_lower", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 16}, "arm_r_upper": {"parent": "torso", "position": [65.0, -55.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 17}, "arm_r_lower": {"parent": "arm_r_upper", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 70.0, "z_index": 18}, "hand_r": {"parent": "arm_r_lower", "position": [0.0, 70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 19}, "prop_r": {"parent": "hand_r", "position": [0.0, 10.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 20}}, "slots": {"torso": {"bone": "torso", "default_attachment": "default", "offset": [-110.0, -120.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/torso.png"}}, "head_base": {"bone": "head", "default_attachment": "default", "offset": [-150.0, -240.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "head/head_base.png"}}, "eye_l_sclera": {"bone": "head", "default_attachment": "default", "offset": [-75.0, -135.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/sclera_left.png", "blink": "head/eyes/eyelid_blink.png", "happy": "head/eyes/eye_happy.png"}}, "eye_l_pupil": {"bone": "head", "default_attachment": "default", "offset": [-66.0, -122.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"default": "head/eyes/pupil.png"}}, "eye_r_sclera": {"bone": "head", "default_attachment": "default", "offset": [25.0, -135.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/sclera_right.png", "blink": "head/eyes/eyelid_blink.png", "happy": "head/eyes/eye_happy.png"}}, "eye_r_pupil": {"bone": "head", "default_attachment": "default", "offset": [34.0, -122.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"default": "head/eyes/pupil.png"}}, "eyebrow_l": {"bone": "head", "default_attachment": "default", "offset": [-70.0, -155.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 4, "attachments": {"default": "head/eyebrows/left.png"}}, "eyebrow_r": {"bone": "head", "default_attachment": "default", "offset": [25.0, -155.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 4, "attachments": {"default": "head/eyebrows/right.png"}}, "mouth": {"bone": "head", "default_attachment": "smile", "offset": [-40.0, -85.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 5, "attachments": {"smile": "head/mouth/smile.png", "open_smile": "head/mouth/open_smile.png", "rest": "head/mouth/rest.png", "A_I": "head/mouth/A_I.png", "E": "head/mouth/E.png", "O": "head/mouth/O.png", "U": "head/mouth/U.png", "M_B_P": "head/mouth/M_B_P.png", "F_V": "head/mouth/F_V.png", "L_D_T_N": "head/mouth/L_D_T_N.png", "W_Q": "head/mouth/W_Q.png"}}, "arm_l_up": {"bone": "arm_l_upper", "default_attachment": "default", "offset": [-30.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_l_low": {"bone": "arm_l_lower", "default_attachment": "default", "offset": [-30.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_l": {"bone": "hand_l", "default_attachment": "rest", "offset": [-35.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "arm_r_up": {"bone": "arm_r_upper", "default_attachment": "default", "offset": [-30.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_r_low": {"bone": "arm_r_lower", "default_attachment": "default", "offset": [-30.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_r": {"bone": "hand_r", "default_attachment": "rest", "offset": [-35.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "prop_r": {"bone": "prop_r", "default_attachment": "none", "offset": [-12.0, -160.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"none": "", "pointer_stick": "props/pointer_stick.png"}}}, "viseme_slot": "mouth", "visemes": {"rest": "smile", "smile": "smile", "open_smile": "open_smile", "A_I": "A_I", "E": "E", "O": "O", "U": "U", "M_B_P": "M_B_P", "F_V": "F_V", "L_D_T_N": "L_D_T_N", "W_Q": "W_Q"}, "default_palette": {}};
+        const ASSETS = {"body/torso.png": "data:image/png;base64,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", "head/head_base.png": "data:image/png;base64,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", "head/eyes/sclera_left.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAABiklEQVR4nO2aTXLDMAiF0TuIWLdXaI7fXqFdRxdJV53pOJaE/hHO28YD7zMoeGyIXtIlNyKof/t45K4JP19dc7uZ5kdCuZUAPYGgBaI1nhuV8P79Gf2N32/dq+OoI0TKfA1UKIBxPSBqAKRAQQgDDRCpOF54bqABogcMeidt1b0ybhbk7G6MgkjFz1UF2iBqYYpaaxZETT7Mmtq95CO+oLUapXkhoV4FEct/VpWmh0ZNwi5nI+czW5HVbSX1YbO1/CZtdeYXO7SVxI/N1tpZIGsgXtk0L53y9iqyu0BGBDIikBGBjAhkRCAjAhkRyIhA1kDC4fW95GPMCvHB159vexXZXaArgLCyc8IJPxi5jTBa4Z/fa7SWpvbijI8nkF3aKxx82m6toGzKc2SaV1VkFQwL80ZBtJ6VEPFVdEZmV4UL8qGUfhYMn+RJdUm2IitguBCi6e93FAxXxhWBxO5Gbxhu2NkSV2Q0TOvimbvkKqCp5czRX4FD5SBuemjsPf1DQ7zXSrm2JX+yol8mrc1y7s6LDAAAAABJRU5ErkJggg==", "head/eyes/eyelid_blink.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAAAqklEQVR4nO3VwQ3DIAyFYcMgvneGzt8Zcvci6Z1WinGwUzX/d0QRz2AgIgAAAAAAAAAAAPfSxgF9PPdxzLbXx3fV9KCuLn+iy50Wol/aWkkd+f0X74PHWKf7aF3VFXXmtsgEFV3TyfweKTa7OxrYxMOd9RS9okNnc9qqEE9Y5rwtI3Q1c2zO9JGoXJBNdDd8tjMXZIE7V3JJvezEo7H8f5D1MAAAAAAAIC5vbbtHGPfbb20AAAAASUVORK5CYII=", "head/eyes/eye_happy.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAAAn0lEQVR4nO3VsQ2AMAxE0diD0DMD8zMDPYtAj0DEsZO4+K9GPh9RoBQAAAD0ItEDl3W7ap89jz0sX0Yu3rOYZCgQUUgyFfAU0pK0hDVPZl7gyLkSERbx9fHmiGd45OfTmyktA3sU8OarNWBEiZYctbyNUSX+8t72qz6R0SWsuTr7X9FqeeypmU/Dkm++7Fnp7AUAAAAAAAAAAAAAAOXbDYkoTReXGEkUAAAAAElFTkSuQmCC", "head/eyes/pupil.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAoCAYAAACfKfiZAAABQklEQVR4nO2YzW0CMRCFPU97XnJK6IEq0gbpIoWkC9JGqqAH4ARpgMiRiCzjn+fxWOwhT9qV1vbM93ZsL8uKU2jeHa+p9u+3F2nNJb3QnFgzYg1uNYKRcCaHMIGX7fNd/+rzZFIJaOCl9tZKQAO3NIHe5K0migZm5aKT99ffg1HMQC9cYyRkoRfaY2SYgdAIZWBOlJ/d50/rjcrcjYnSoJoJBl6rAmrBOUiq/XzY/x2siYlZ/cydxlB/XYvz7KGLkBFyHew2YpXLBytAXG52d0xWBlqgoeAeLPwbcEudguvHlykolw+aPxNW8uzlToHlNJTywJ9K09BrIhd/Y8I9WGAGaavAxEl4wbwbML+SNXA45RJ3sq/nKSPMHcfrbXJKWe0QxA0jH0yp3GAHjoBnDVibKOWCNtAC7rX8j1QtZjQV+wEZ+Zdx4NPHEQAAAABJRU5ErkJggg==", "head/eyes/sclera_right.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABBCAYAAACTiffeAAABiklEQVR4nO2aTXLDMAiF0TuIWLdXaI7fXqFdRxdJV53pOJaE/hHO28YD7zMoeGyIXtIlNyKof/t45K4JP19dc7uZ5kdCuZUAPYGgBaI1nhuV8P79Gf2N32/dq+OoI0TKfA1UKIBxPSBqAKRAQQgDDRCpOF54bqABogcMeidt1b0ybhbk7G6MgkjFz1UF2iBqYYpaaxZETT7Mmtq95CO+oLUapXkhoV4FEct/VpWmh0ZNwi5nI+czW5HVbSX1YbO1/CZtdeYXO7SVxI/N1tpZIGsgXtk0L53y9iqyu0BGBDIikBGBjAhkRCAjAhkRyIhA1kDC4fW95GPMCvHB159vexXZXaArgLCyc8IJPxi5jTBa4Z/fa7SWpvbijI8nkF3aKxx82m6toGzKc2SaV1VkFQwL80ZBtJ6VEPFVdEZmV4UL8qGUfhYMn+RJdUm2IitguBCi6e93FAxXxhWBxO5Gbxhu2NkSV2Q0TOvimbvkKqCp5czRX4FD5SBuemjsPf1DQ7zXSrm2JX+yol8mrc1y7s6LDAAAAABJRU5ErkJggg==", "head/eyebrows/left.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAUCAYAAAAZb7T/AAAAc0lEQVR4nGNgGAX0AYzUMERO0/o/sWofXT9KsZ2MtHYkLTzBOBAOpdQDjIPBsaQ6nmmwOZgYexnpnbnkqGAuIzkGU6MEoMQuRlIMoaZjKbGXkRiNtHQsOsDmBryOxqaRng6m2H6QxsFaeoyCUTAKRsEIAgDumz+RHMiu3gAAAABJRU5ErkJggg==", "head/eyebrows/right.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAUCAYAAAAZb7T/AAAAc0lEQVR4nGNgGAX0AYzUMERO0/o/sWofXT9KsZ2MtHYkLTzBOBAOpdQDjIPBsaQ6nmmwOZgYexnpnbnkqGAuIzkGU6MEoMQuRlIMoaZjKbGXkRiNtHQsOsDmBryOxqaRng6m2H6QxsFaeoyCUTAKRsEIAgDumz+RHMiu3gAAAABJRU5ErkJggg==", "head/mouth/smile.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAnUlEQVR4nO3WsQ0CMQwF0IRB0jMD8zMDfRYBUVAe0oFjH+g96drE+YnObg0AAAAAAAD4YeN8uT+/f66hRy84Noqdt2v4Xkeo5dSCzY3isl9i1kWGB/hOVoiZl9UrDzEDX0P2fi/9SC9h7jjgyrX3WP5jH8VdeHUDS+uMoyDIjM5/mNEiUubIlB7gyiArZs2yAL8NtSIsAAAAAADa5x668z0TCq5JKgAAAABJRU5ErkJggg==", "head/mouth/open_smile.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABPklEQVR4nO2YPw7CIBSHoekZdGMxDpp4As/R8zSex3N4AhMdjAubHkIMg0tDNS28P5jfN7YND74+4IExAAAAAAAAgMlYw0QIIRhmrLXk42uoA/w7EJgJBGYCgZlAYCYQmAkEAgAAAKBSit9WuM2e/dZlKv56Kjbu1ijjslj9/Gb7vBsttDWJG36rQWRbkziNIpta5VG0ozIDD49X8nm3WxeNEyUez7fku35JlycN9Q7XJzpfWt63dofxS+7AIlO4I5LH1b6IwJ5wCknHJYngC08Tzf1iS42eOQu54pFmiksc6zhKjlRdSDUrSH+TT3SauujllBchz3PPKJFbXoRlofAMEiXkRdhWdk8oUUpehL3ccCP3hXM2l7EfwFlGidVrLkOkBnEfxAteV+AGW7JwFxc4R6jWkw4AAAAAgKmHNyDYbS3JLfdeAAAAAElFTkSuQmCC", "head/mouth/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAnUlEQVR4nO3WsQ0CMQwF0IRB0jMD8zMDfRYBUVAe0oFjH+g96drE+YnObg0AAAAAAAD4YeN8uT+/f66hRy84Noqdt2v4Xkeo5dSCzY3isl9i1kWGB/hOVoiZl9UrDzEDX0P2fi/9SC9h7jjgyrX3WP5jH8VdeHUDS+uMoyDIjM5/mNEiUubIlB7gyiArZs2yAL8NtSIsAAAAAADa5x668z0TCq5JKgAAAABJRU5ErkJggg==", "head/mouth/A_I.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABUElEQVR4nO2ZsQ3CMBBFnYgZoEuDKEBiAubIPBHzMAcTIEGBaNzBEASlQEKWCJC7++eI/9okPvv5cnacEAghhBBCRkmBCNK2bRucKIrCdIylZeP/AAUKoUAhFCiEAoVQoBAKJIQQQgghZABqZ2XVcuN25jeUeNqLx88vESEUKGQSMuM4nX+8Z3W7hFyYjEHYp2c8hZoJ3F7vvdfr9UIt1lPo7nDuva+ZleOpgU1PZzXlfduuhbyOEr0lqI3k/dq+xhYGvgrXxvLQcdQFxmRWX18b5KDSeOnrq5V9kAxsjGpPLvHVW4+Ks2uBdv8g6dE4ZSEirkmEmGkWWvSrRHV2Bf5aSONZTappjkcniSh5HeZFIoIlIuV1QKp7BElEy+uAF/sqObkechqTg7gnbqtl9eYXgOQ80GP1d99uVAr/Ujy3Te4ChwjNdZ9JCCGEhF94AAe7bcto3/O4AAAAAElFTkSuQmCC", "head/mouth/E.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAsklEQVR4nO3Y0Q3CMAyEYSfqHPQZVijjwwrw3CxShrAvOpH/G6C6nhIrcgQAAAAAAADmaaoP3+7HFWbG913+vz0WKU+Vq69SnipfX6k8Rc6mDHV+XuFifzwlM1EyA93KU+aRFbgKCkyiwKQtJg7tf8QJTKJA1yt8mj1jVGOFE5hEgUkU6FrgbvaMUeVpK25jKper3X3jq1CZs/wKD/MSq/NJZuAwLdE1FwAAAAAAABBz/ADUfzCxGVoIQAAAAABJRU5ErkJggg==", "head/mouth/O.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABZklEQVR4nO2aQWrDMBBFZeEzpDttShc15AQ9h89TfJ6coycIuIuSjXbpIdoSaMAosYM9suaP+W8ZS8J+/lKENc4RQgghRIfKARJe337HrsXPD6h7rqyIQxXpnUF5S9qvhfpbDBlEaKaxQpXXnX9ufnt/8nASawdGd0dcem1KZGk8Uvq6CXmP2mmtid6aPDSJEHOhmylP2s+0wJCkRCoh7V86hRAJtIy3nD6EFDKBQihQCAVaERhWWv+010EmUAgFCqFAIRS4tc9ZF9r9ixvjcPxySNQWpI21Q5DpLcnL1W9TAluhBG2JRc8RQrK57XfP2cZuvk8qZyRqCewzyltjPDNT2DoUaElgLLQulTwjZgKtCYz/6Uj/NaVcxytdoaCawCaTxNwvA15gHKRE+vDD/hr1MWoJjBkkasuD+pjQDGRMbYo1p+s9WB9oXaDkEAihzBdmHxhnykCQdwHiJixX6RNCCCFuKX/tjZNz2AKLlgAAAABJRU5ErkJggg==", "head/mouth/U.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAA00lEQVR4nO3Zuw3CMBRGYTtL0LlnBoaLPBwz0LtjCYhSg6X4Afe/0flKcGEdXUcOhAAAAAAAAAC4EYOgdL29a9+Vx11qz9FLONWQS3AYr2f9qQOmzhgKEc2PQapEyM/Xx2frZZE7zlEtXv4S7khIq4gSR7glXsu6UwdMk59fVs9DmQnMjVOlMoUyAb0i4CACDiLgWQKulUvyrPW/YraLMvniy0U6HJ8qlenb8S7sPeDoW4T174ISZ6F0RrCOJxOwJ4ZCvJ3EJjz/JwIAAAAAAIDwRxsAE0kk7ShPdQAAAABJRU5ErkJggg==", "head/mouth/M_B_P.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAATElEQVR4nO3QwQ2AMAwEQZNC+KcG6k8N/GmEFGEjWWKmgJNuIwAAAAAAAABaO74aPuf1RjPPvcr/jurBvxEwScAkAQEAAAAAAIDobQPusAQKEeOAbwAAAABJRU5ErkJggg==", "head/mouth/F_V.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAjUlEQVR4nO3YzQ3CMAwGUDdiAw7c4FxGAHZjFYaBFegZFoEZkBWXwnsD5OeTY8mJAAAAAACACkPFJtvx+IqZPKdb1zsOVcE97teottufugfZeiz6T9ovPtvK86jAJAEmCTBpFUUu60OU2/SvDxWYJMAkAS6lB54L+tEc2lJn0E8Z5b6U3xgAAAAAAKLEG5bjGL5SgxJ6AAAAAElFTkSuQmCC", "head/mouth/L_D_T_N.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAABMElEQVR4nO3YMRLCIBAFUJax01o7Giu9goWeRI+S4Sh6Ei28glY26bTWVhxnTBknMewuxP/aDAP5EFhiDAAAAAAAAGSGpDoKIQQjjIjY389yd9B3CLAjBNgRAuwIAXY0MAl6rDa1z4b7rfnLMqaJ+3LduNQZHXZJjJ1yCy61IG3O4cVon32AuYt+iLjZQnxFtO2zPB+jffZYgbkHOL9dVNv3og6cf0I4jaet22hLIsA2QaYSXIUkNnR/fRotxcTmdYiUEQfHIfb4rNYq6Eu/VmqWC+EQuT/dCttblYohSoX3Rlq3BM9wsNRNEOe+TNpXLR8hyG8rm/tQo5Tuq75FmE22A4mKQLTkcII/GqTKKZWazTEGKV2Hqhe9LkKYmsW7eoC/hpn6jQcAAAAAAABMql6DJGYlP3B7CQAAAABJRU5ErkJggg==", "head/mouth/W_Q.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAyCAYAAADLLVz8AAAAtUlEQVR4nO3YsQ3CQAwF0AtiB7r0zMBwEcMxA306lgBESbiICBD2wXulo5OsH0vnpBQAAAAAAPiGriTVb3eXaW08HtL127UQXOYgu5aCyxjkqjQa3jvnPmldktqfzg+1YZPifd8J76ivTFEtvLl69BSGB7g0vKXPy78H2BoB/lqAw5OLIttFEt7NWNnl5kKq1aN3wbRrzJBs0uak6HJ8cYqip+8mvIEp38J/9jcGAAAAAICyzBXw4TO2hx3FzQAAAABJRU5ErkJggg==", "body/arm_upper.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAABkCAYAAADaIVPoAAABoUlEQVR4nO3cvVHDQBDF8b/eeIYuPKTOHOMmaIYqaIYmTOzMKUMXRDAEREj+0O2tBW9/oaQ73dOend1CKaWUUkrpYyDRerP7nLr3ftynrGW4ZchbhB+ygx6fDr+ubZ63acEHksKOBb0keHRosZCwU8/N+UmkBV43hM0KrSWFzQitiEmit13P94hO5lY3any3wOuk6ka9T3Rw9/CyqHlStvRSKXp7RVdlbL6WbS062e7fbjp+ijCjnpPPrVKv6qZU+NrF9wybtqUvDdE77LcVSX7CHHb3k/cyrEiWGW5M/Uv/d8KMMCPMCDPCjDAjzAgzwowwI8wIM8KMMCPMCDPCjDAjzAgzwowwI8wIM8KMMCPMCDPCjDAjzAgzwowwI8wIM8KMMCPMCDPCjDAjzAgzwowwI8yoZfDY6e2P18emBV0yX8upcWFGPSaNqnL0bgkJPLW9Whc7Nb61CYLoaG7oHpUNDXzqq1+7+FPPR7S4GAh07pjrqaO25z5MVD+PgWA9jshHNi8RwaI7qyy+U0vkIv9MLx7LbktL7adVSimllEKWLwKxky2OuZ9MAAAAAElFTkSuQmCC", "body/arm_lower.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAABkCAYAAADaIVPoAAABaElEQVR4nO3cvU0DQRRF4TNH1IFICCgBUQsRdRFRC6IEAhJEI6YCL2L2zVrWfV9sv5/dsbSWfA2ttdZaa22NsbfA7cPTiYP9fL5Pz+21Lbu3r5doWmG2v0c2qzYzx6hocrp/5Sjj62XXZ9q9Axy5bEU/CSNhJIyEkTASRsJIGFc8+ay0t9+45mfpma+KHtFklZk5PLJZpdn+EuamuuD3x1t1Se4en8tqSRgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBgJI2EkjISRMBJGwkgYCSNhJIyEkTASRsJIGAkjYSSMhJEwEkbCSBircweVv14/V+9if3pwjVxRtOouV5+WkoXPHa+9w557/974kCw0u/SKO1u68NZV/+/wW6+vCIcNCv2VSdzKNP11YaqScINiK4KYlbE/KVadSayuJwtUDbki0DlYbOaIr0yuDg60tfyl47mttdZaa1T7BdGpXrK3cFQzAAAAAElFTkSuQmCC", "body/hands/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAABJ0lEQVR4nO2ayw3CQAxEx1MI4koJiFqojloQJXBFNAL3SFH2Y2828rzzJuMXR4m0XkAIIYQQQsRgGMTpcvttrfm+n+H12N6So+VtNtFocZtVNErcMEj283ps3uN8vYdLG4JlS0RrxHulDUGyLaKl4j3S5i3rIVoi3irN2WXX7tv6geTsst7SjComAo8czvSvbaG2Hh6lu155PHJ3W+rikbrrkUskg62vzV7dXcsvfa2JZBDJIJJBJINIBpEMIhlEMli6cLnDsLXhFs0yv3QHhEgGey7eq8s9uaxZPGL200JNXewNG93l3jzWXjBbl2vroUfoqC575NDrqUZLe23Gs7WAkdKekwfrLSbVbCnl9DDlfDjlCYCUZzzSnuKZ+ZyWEEIIIQRG8QcD8J1EdqZflwAAAABJRU5ErkJggg==", "body/hands/wave.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAABtElEQVR4nO2bS3LCMBBEjQ4ypW2OkMpZcrqcJZUjZOvyRZJiQRYudRDW9IxM9VvxEZZ4eGBowbIIIYQQs3BhHNRe3n72t23fn5dZxvVQFmessbjW7VnjUsTYnUXc7s8al1JKtpt8/fr4u1xf3+HjIsc9UlbupbRfXOt69rg0Mc+AxAAkBiAxAIkBSAxAYgASA5AYgMQAJAYgMQCJAUhMpJi6y0FQfpI1LjzztYMxYotrltLzxK7hU8+8j2a/7mG43VnkLTzySOt6ORKIh4lZG2la60n3juvl6C5BiJh1IGJEtGQdlZCyS7ASpKDjer7HlTNKiZBTziqFLSdk+4QNY75hMeZY156Mrquc/WxhzavvSgwxNmkZeayvPEMZMeZXKQEkBiAxAIkBSAxAYiLEVIe0bZb5h8RsjsEQg5H1qZSixNSkcvKed1jMNmk5ja4rZMONDWO+wnp1apAc1m6B2xmzJchhbqG4ltIWKOdU+0oIbzkRZRr2Ry6PMOk/Id6fjtSPWuvc4B85O1jtAr0HMWIuzOyhwpozcxQU0VSGd602ICiyy05t543wSyghhBBCCCGWFr/hE+Hfe/awpwAAAABJRU5ErkJggg==", "body/hands/point.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAABuElEQVR4nO2bwY3CMBBFkxV1jHKlBEQtWx21IErgGrkRVhyyQpbH64SZ753w3wmi4CgvHsfxD8NACCEEzmjZmBzPj3xbul9Nj4Fi9BISXdAXQsqa/XYhRlaebCQ5B+sG59vl9/N0+h6isrnHSOHqv0opfdd+t8sxpiahtv1jxOwNilGgGAWKUaAYBYpRoBgFilGgGAWKUaAYBYpRoBgFilGgGAWKQS1t7iVd6CJGVixvvu6LlBSqlOR4fqDWjEOJWUDI6TrG/LVYXotfFjle5dVFzNyYHLRkVE9BHnLClNJ8u6hCPUorjBh0ThVODCrhNBMzKWOAV37tLWezmFQY8HIJJSmWpeBZVuZ3pSnwGw5mpZRW3iY9rnDeplU5vT3GpEY50d56MCmldL+O2pWKJsR95jsHFRJ6HoOAYhQoxltMyu5OqPlMfhyrJ232mB5iJude49m+qZjU8PxkRaldywUr8x6TAHK8pUDHmMlIDmpQd8tppPIwt2VWXBPisebrGmBJw5Pu1pRgwSslgCR74rBY7Z1KQsaYZHwSiKgWHpjLG70HmV13/Z+i/OO3HQghhBBCCCHDJ/MD9jmhjfcK6QAAAAAASUVORK5CYII=", "body/hands/thumbs_up.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAB30lEQVR4nO2aUWrDMAyGk7AD7AQi7G1HKDtLT7ezjB1hb8P4BDvBNlbIS7EyN/4l2eX/oBSSUjtfpMSRMk2EEGLHbPjfkzy//Gj78seb6ditzN5CRhG0REo58vshxcjBg+xRzoP1AOn99fK9PD7N31+fFwHr6Tz1DixipHDWNyk123uLGvg15j8ptfvvVszoUIwCxShQjALFKFCMAsUoUIwCxShQjALFKFCMAsUoUExUoeoWSjWZqJpwV2JqZHmJckslAVXo/v7Ho9o37DVGjOWYpdJ6Ou+WL0sF8dLv9wrnmxyL9IJFTC5MTjuoWinb9u3jGT1Q09IwwVuK45pwZOR0ISYd7BiUBKHkmPaVamhpo1j2p0L7SgnQW7LqT0HCTq7OUkQz7TqtWlOqOWKks9Yqal7wVEpBrVf0uMOufK1Z7jGNEPODRkwKfoMBOT5TSYFiFChGgWIUKMZDzBr8NiZy/CYxudO3uhHzYyp5iVmD0gk9brOY3Gk6hZcdSpPwjhp0Lcb0GrM6ybEaJ6R9gsKyGD57Peon4JPvcO2TmjpIi6C9CETfBObIIlGqkFSTjhZ3RvNbrRhW+SyXCuYr32w0eev1k+viTADR47WgDF21SoWoXlfWhBBCCCFkGotfuKW+6LgJHFMAAAAASUVORK5CYII=", "props/pointer_stick.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAC0CAYAAACOqextAAABWElEQVR4nO2cO47CMBQAScQN6KFOt/2WHAEq7sEp9h5U7BEo6bejhp4zgBBkZeXjcUgkQJop/ez3/IbEVPFo9OlkqROnxfelOnY67HF99kziLoWyPolTCmWpyQ/rv9q84ucLi4ybCjQlns/ODbFJa6GSPLb7WPJwPOyu2n2tQFuSZ+N5bPe0OCzS1gV20BcLdFMUviS3Z3t3vD/nxG1e+C6EefA32EERitcKVLuIJSnH23afdFQUj8XlsdAUi/Ga03TI/4O8z+KUeKcOfreb//HFcjVMB32xAKIiREWIihAVISpCVISoCFERoiJERYiKEBUhKkJUhKgIURGiIkRFiIoQFSEqQlSEqAhREaIiREWIihAVISpCVISoCFERoiJERYiKEBUhKkJUhKgIURGiIkRFiIoQFSEqQlSEqAhREaKiYa4ymEa+LqUPP/O3uYyh2knKRQzyHlwBfE9nK16TcuAAAAAASUVORK5CYII="};
 
         // Preload images
         const loadedImages = {};
@@ -241,7 +252,8 @@
                 arm_l_upper: 0,
                 arm_l_lower: 0,
                 arm_r_upper: 0,
-                arm_r_lower: 0
+                arm_r_lower: 0,
+                torso: 0
             },
             attachments: {
                 hand_l: "rest",
@@ -250,7 +262,7 @@
                 eye_r_sclera: "default",
                 prop_r: "none"
             },
-            viseme: "rest",
+            viseme: "smile",
             gaze: { x: 0, y: 0 },
             blink: 0,
             simulatingSpeech: false,
@@ -266,9 +278,8 @@
             const rect = canvas.getBoundingClientRect();
             const mouseX = ((e.clientX - rect.left) / rect.width) * 800;
             const mouseY = ((e.clientY - rect.top) / rect.height) * 800;
-            // Eye center is roughly at (400, 350)
-            state.gaze.x = Math.max(-12, Math.min(12, (mouseX - 400) * 0.05));
-            state.gaze.y = Math.max(-10, Math.min(10, (mouseY - 350) * 0.05));
+            state.gaze.x = Math.max(-10, Math.min(10, (mouseX - 400) * 0.04));
+            state.gaze.y = Math.max(-8, Math.min(8, (mouseY - 350) * 0.04));
         });
 
         function setViseme(v) {
@@ -280,43 +291,89 @@
             if (btn) btn.classList.add('active');
         }
 
-        function applyPose(name) {
-            // Reset
-            state.joints = { head: 0, arm_l_upper: 0, arm_l_lower: 0, arm_r_upper: 0, arm_r_lower: 0 };
-            state.attachments = { hand_l: "rest", hand_r: "rest", eye_l_sclera: "default", eye_r_sclera: "default", prop_r: "none" };
-            setViseme("rest");
+        function setEmotion(em) {
+            document.querySelectorAll('.section .btn').forEach(b => {
+                if (b.id && b.id.startsWith('e-')) b.classList.remove('active');
+            });
+            const btn = document.getElementById('e-' + em);
+            if (btn) btn.classList.add('active');
 
-            if (name === "point_stick") {
-                state.joints.head = -8;
-                state.joints.arm_r_upper = -45;
-                state.joints.arm_r_lower = 10;
+            if (em === "smile") {
+                state.viseme = "smile";
+                state.attachments.eye_l_sclera = "default";
+                state.attachments.eye_r_sclera = "default";
+            } else if (em === "open_smile") {
+                state.viseme = "open_smile";
+                state.attachments.eye_l_sclera = "default";
+                state.attachments.eye_r_sclera = "default";
+            } else if (em === "happy_eyes") {
+                state.viseme = "open_smile";
+                state.attachments.eye_l_sclera = "happy";
+                state.attachments.eye_r_sclera = "happy";
+            }
+        }
+
+        function applyPose(name) {
+            // Reset to defaults
+            state.joints = { head: 0, arm_l_upper: 0, arm_l_lower: 0, arm_r_upper: 0, arm_r_lower: 0, torso: 0 };
+            state.attachments = { hand_l: "rest", hand_r: "rest", eye_l_sclera: "default", eye_r_sclera: "default", prop_r: "none" };
+            state.viseme = "smile";
+
+            if (name === "point_up_right") {
+                state.joints.torso = -3;
+                state.joints.head = 6;
+                // Right arm raises up-right towards target
+                state.joints.arm_r_upper = -135;
+                state.joints.arm_r_lower = 15;
                 state.attachments.hand_r = "point";
                 state.attachments.prop_r = "pointer_stick";
-                setViseme("A_I");
-            } else if (name === "happy_wave") {
-                state.joints.head = 10;
-                state.joints.arm_l_upper = -110;
+                // Left arm on hip
+                state.joints.arm_l_upper = 25;
                 state.joints.arm_l_lower = -30;
+                state.viseme = "smile";
+            } else if (name === "point_up_left") {
+                state.joints.torso = 3;
+                state.joints.head = -6;
+                // Left arm raises up-left towards target
+                state.joints.arm_l_upper = 135;
+                state.joints.arm_l_lower = -15;
+                state.attachments.hand_l = "point";
+                // Right arm on hip
+                state.joints.arm_r_upper = -25;
+                state.joints.arm_r_lower = 30;
+                state.viseme = "smile";
+            } else if (name === "happy_wave") {
+                state.joints.head = 8;
+                // Left arm raises high outside the body (+125 deg)
+                state.joints.arm_l_upper = 125;
+                state.joints.arm_l_lower = 25;
                 state.attachments.hand_l = "wave";
                 state.attachments.eye_l_sclera = "happy";
                 state.attachments.eye_r_sclera = "happy";
-                setViseme("E");
+                state.viseme = "open_smile";
             } else if (name === "thumbs_up") {
-                state.joints.arm_r_upper = -40;
-                state.joints.arm_r_lower = -45;
+                state.joints.head = -4;
+                state.joints.arm_r_upper = -50;
+                state.joints.arm_r_lower = -55;
                 state.attachments.hand_r = "thumbs_up";
-                setViseme("O");
+                state.viseme = "open_smile";
             } else if (name === "thinking") {
-                state.joints.head = 15;
-                state.joints.arm_r_upper = -70;
-                state.joints.arm_r_lower = -80;
+                state.joints.head = 12;
+                state.joints.arm_r_upper = -115;
+                state.joints.arm_r_lower = -90;
                 state.attachments.hand_r = "rest";
-                setViseme("U");
+                state.viseme = "smile";
             } else if (name === "surprised") {
                 state.joints.head = 0;
-                state.joints.arm_l_upper = -50;
-                state.joints.arm_r_upper = 50;
-                setViseme("O");
+                state.joints.arm_l_upper = 70;
+                state.joints.arm_l_lower = 40;
+                state.joints.arm_r_upper = -70;
+                state.joints.arm_r_lower = -40;
+                state.attachments.hand_l = "wave";
+                state.attachments.hand_r = "wave";
+                state.viseme = "O";
+            } else if (name === "rest") {
+                state.viseme = "smile";
             }
             syncSliders();
         }
@@ -349,25 +406,23 @@
             const btn = document.getElementById("speech-btn-label");
             if (state.simulatingSpeech) {
                 btn.innerText = "⏹ Stop Simulation";
-                const phonemes = ["rest", "A_I", "E", "O", "M_B_P", "L_D_T_N", "F_V", "A_I", "W_Q", "rest"];
+                const phonemes = ["smile", "A_I", "E", "O", "M_B_P", "L_D_T_N", "F_V", "open_smile", "W_Q", "smile"];
                 let pIdx = 0;
                 speechTimer = setInterval(() => {
                     setViseme(phonemes[pIdx % phonemes.length]);
                     pIdx++;
-                }, 140);
+                }, 130);
             } else {
                 btn.innerText = "▶ Play Lip-Sync Audio Simulation";
                 clearInterval(speechTimer);
-                setViseme("rest");
+                setViseme("smile");
             }
         }
 
         // 2D Matrix Transforms
         function computeTransforms() {
             const transforms = {};
-            const worldBones = {};
 
-            // Recursive transform propagation
             function solveBone(boneName) {
                 if (transforms[boneName]) return transforms[boneName];
                 const cfg = MANIFEST.bones[boneName];
@@ -376,24 +431,19 @@
                     parentMat = solveBone(cfg.parent);
                 }
 
-                // Local transform
                 const pos = cfg.position;
                 const rotDeg = (cfg.rotation_deg || 0) + (state.joints[boneName] || 0);
                 const rotRad = (rotDeg * Math.PI) / 180;
                 const pivot = cfg.pivot || [0, 0];
 
-                // Procedural breathing on torso
                 let extraY = 0;
                 if (boneName === "torso" && document.getElementById("chk-breathe").checked) {
-                    extraY = Math.sin(state.time * 2.5) * 4;
+                    extraY = Math.sin(state.time * 2.5) * 3;
                 }
 
-                // Compose TRS
-                // Translate(pos + pivot) * Rotate(rad) * Translate(-pivot)
                 const c = Math.cos(rotRad);
                 const s = Math.sin(rotRad);
                 
-                // Local Matrix
                 const a = c;
                 const b = s;
                 const d = -s;
@@ -401,7 +451,6 @@
                 const tx = pos[0] + pivot[0] - (c * pivot[0] - s * pivot[1]);
                 const ty = pos[1] + extraY + pivot[1] - (s * pivot[0] + c * pivot[1]);
 
-                // Multiply parentMat * localMat
                 const pa = parentMat[0], pb = parentMat[1], pd = parentMat[2], pe = parentMat[3], ptx = parentMat[4], pty = parentMat[5];
                 const outA = pa * a + pd * b;
                 const outB = pb * a + pe * b;
@@ -424,7 +473,6 @@
         function loop() {
             state.time += 0.016;
 
-            // Auto-blink logic
             if (document.getElementById("chk-blink").checked) {
                 const blinkCycle = state.time % 3.5;
                 if (blinkCycle > 3.35) {
@@ -447,7 +495,6 @@
 
             const boneTransforms = computeTransforms();
 
-            // Collect slots
             const slotList = [];
             for (const [slotName, slotCfg] of Object.entries(MANIFEST.slots)) {
                 const bone = MANIFEST.bones[slotCfg.bone];
@@ -461,15 +508,13 @@
                 const cfg = slot.cfg;
                 const mat = boneTransforms[cfg.bone];
 
-                // Determine active attachment
                 let attKey = cfg.default_attachment || "default";
                 if (sName === MANIFEST.viseme_slot) {
-                    attKey = MANIFEST.visemes[state.viseme] || "rest";
+                    attKey = MANIFEST.visemes[state.viseme] || state.viseme || "smile";
                 } else if (state.attachments[sName]) {
                     attKey = state.attachments[sName];
                 }
 
-                // Eyelid blink override
                 if ((sName === "eye_l_sclera" || sName === "eye_r_sclera") && state.blink === 1) {
                     attKey = "blink";
                 }
@@ -480,10 +525,8 @@
                 const img = loadedImages[relPath];
 
                 ctx.save();
-                // Apply 2D Matrix: a, b, d, e, tx, ty
                 ctx.transform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
 
-                // Pupil gaze offset
                 let px = 0, py = 0;
                 if (sName.includes("pupil")) {
                     px = state.gaze.x;
@@ -522,7 +565,6 @@
             ctx.restore();
         }
 
-        // Start
         loop();
     </script>
 </body>
