@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoMascot - Live Rig Inspector</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #viewport-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+        #mascotCanvas {
+            background: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            cursor: crosshair;
+        }
+        #sidebar {
+            width: 380px;
+            background: #1e293b;
+            border-left: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+            background: #0f172a;
+        }
+        .header h1 { font-size: 18px; font-weight: 700; color: #38bdf8; }
+        .header p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        .section {
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .control-group {
+            margin-bottom: 12px;
+        }
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .control-label span.val { color: #38bdf8; font-weight: 600; }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #38bdf8;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .btn {
+            background: #334155;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+        .btn:hover { background: #475569; border-color: #38bdf8; color: #38bdf8; }
+        .btn.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
+        .btn-primary {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: white;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        .btn-primary:hover { background: #1d4ed8; color: white; }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+        .badge {
+            font-size: 10px;
+            background: #0284c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        #badge-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="viewport-container">
+        <div id="badge-status">🎮 Live Rig: <span style="color:#38bdf8;" id="char-name">Chibi Tech Guide</span> • Target Gaze & Pointer</div>
+        <canvas id="mascotCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1>VideoMascot Inspector</h1>
+            <p>2.5D Layered Puppet & Kinematic Rig Tool</p>
+        </div>
+
+        <!-- Quick Poses -->
+        <div class="section">
+            <div class="section-title">Character Poses & Actions</div>
+            <div class="btn-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <button class="btn" onclick="applyPose('point_up_right')">👉 Point Up-Right</button>
+                <button class="btn" onclick="applyPose('point_up_left')">👈 Point Up-Left</button>
+                <button class="btn" onclick="applyPose('happy_wave')">👋 Wave Hello</button>
+                <button class="btn" onclick="applyPose('thumbs_up')">👍 Thumbs Up</button>
+                <button class="btn" onclick="applyPose('thinking')">🤔 Thinking</button>
+                <button class="btn" onclick="applyPose('surprised')">😲 Surprised</button>
+                <button class="btn" onclick="applyPose('rest')">🧘 Neutral Rest</button>
+            </div>
+        </div>
+
+        <!-- Emotional Expressions -->
+        <div class="section">
+            <div class="section-title">Facial Expressions <span class="badge">Mood</span></div>
+            <div class="btn-grid">
+                <button class="btn active" id="e-smile" onclick="setEmotion('smile')">😊 Smile</button>
+                <button class="btn" id="e-open_smile" onclick="setEmotion('open_smile')">😃 Open Smile</button>
+                <button class="btn" id="e-happy_eyes" onclick="setEmotion('happy_eyes')">✨ Happy ^^</button>
+            </div>
+        </div>
+
+        <!-- Viseme Pad -->
+        <div class="section">
+            <div class="section-title">Speech Visemes (9-Set) <span class="badge">Lip-Sync</span></div>
+            <div class="btn-grid">
+                <button class="btn" id="v-smile" onclick="setViseme('smile')">/smile/</button>
+                <button class="btn" id="v-A_I" onclick="setViseme('A_I')">/A_I/</button>
+                <button class="btn" id="v-E" onclick="setViseme('E')">/E/</button>
+                <button class="btn" id="v-O" onclick="setViseme('O')">/O/</button>
+                <button class="btn" id="v-U" onclick="setViseme('U')">/U/</button>
+                <button class="btn" id="v-M_B_P" onclick="setViseme('M_B_P')">/M_B_P/</button>
+                <button class="btn" id="v-F_V" onclick="setViseme('F_V')">/F_V/</button>
+                <button class="btn" id="v-L_D_T_N" onclick="setViseme('L_D_T_N')">/L_D_T_N/</button>
+                <button class="btn" id="v-W_Q" onclick="setViseme('W_Q')">/W_Q/</button>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="toggleSpeechSim()">
+                <span id="speech-btn-label">▶ Play Lip-Sync Audio Simulation</span>
+            </button>
+        </div>
+
+        <!-- Procedural & Overlays -->
+        <div class="section">
+            <div class="section-title">Procedural Physics & FX</div>
+            <div class="toggle-row">
+                <span>Dynamic Mouse Gaze Tracking</span>
+                <input type="checkbox" id="chk-gaze" checked>
+            </div>
+            <div class="toggle-row">
+                <span>Breathing / Subtle Bob</span>
+                <input type="checkbox" id="chk-breathe" checked>
+            </div>
+            <div class="toggle-row">
+                <span>Auto-Blink Cycle</span>
+                <input type="checkbox" id="chk-blink" checked>
+            </div>
+            <div class="toggle-row">
+                <span>Show Bone Skeleton</span>
+                <input type="checkbox" id="chk-skeleton" onchange="render()">
+            </div>
+        </div>
+
+        <!-- Kinematic Sliders -->
+        <div class="section">
+            <div class="section-title">Joint Kinematics</div>
+            <div class="control-group">
+                <div class="control-label"><span>Head Tilt</span><span class="val" id="val-head">0°</span></div>
+                <input type="range" id="sld-head" min="-45" max="45" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Right Shoulder (Aim)</span><span class="val" id="val-r-sh">0°</span></div>
+                <input type="range" id="sld-r-sh" min="-180" max="180" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Right Elbow</span><span class="val" id="val-r-el">0°</span></div>
+                <input type="range" id="sld-r-el" min="-150" max="150" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Left Shoulder (Wave)</span><span class="val" id="val-l-sh">0°</span></div>
+                <input type="range" id="sld-l-sh" min="-180" max="180" value="0" oninput="onSliderChange()">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Left Elbow</span><span class="val" id="val-l-el">0°</span></div>
+                <input type="range" id="sld-l-el" min="-150" max="150" value="0" oninput="onSliderChange()">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MANIFEST = {"id": "nexus_bot", "name": "Nexus Bot", "version": "1.0.0", "description": "Flagship sleek futuristic tech companion with floating magnetic articulation and emissive visor.", "canvas_size": [1000, 1000], "bones": {"root": {"parent": null, "position": [500.0, 800.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 0, "physics": null, "constraints": null}, "torso": {"parent": "root", "position": [0.0, -260.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 10, "physics": {"stiffness": 140.0, "damping": 16.0, "mass": 1.2, "resting_offset_deg": 0.0}, "constraints": null}, "head": {"parent": "torso", "position": [0.0, -110.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 20, "physics": {"stiffness": 190.0, "damping": 18.0, "mass": 0.9, "resting_offset_deg": 0.0}, "constraints": {"min_rotation_deg": -35.0, "max_rotation_deg": 35.0}}, "antenna": {"parent": "head", "position": [0.0, -145.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 20.0], "length": 30.0, "z_index": 25, "physics": {"stiffness": 220.0, "damping": 10.0, "mass": 0.3, "resting_offset_deg": 0.0}, "constraints": null}, "arm_l_upper": {"parent": "torso", "position": [-75.0, -70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 80.0, "z_index": 14, "physics": {"stiffness": 160.0, "damping": 14.0, "mass": 0.7, "resting_offset_deg": 0.0}, "constraints": null}, "arm_l_lower": {"parent": "arm_l_upper", "position": [0.0, 80.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 80.0, "z_index": 15, "physics": null, "constraints": null}, "hand_l": {"parent": "arm_l_lower", "position": [0.0, 80.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 16, "physics": null, "constraints": null}, "arm_r_upper": {"parent": "torso", "position": [75.0, -70.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 80.0, "z_index": 17, "physics": {"stiffness": 160.0, "damping": 14.0, "mass": 0.7, "resting_offset_deg": 0.0}, "constraints": null}, "arm_r_lower": {"parent": "arm_r_upper", "position": [0.0, 80.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 80.0, "z_index": 18, "physics": null, "constraints": null}, "hand_r": {"parent": "arm_r_lower", "position": [0.0, 80.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 19, "physics": null, "constraints": null}, "prop_r": {"parent": "hand_r", "position": [0.0, 10.0], "rotation_deg": 0.0, "scale": [1.0, 1.0], "pivot": [0.0, 0.0], "length": 0.0, "z_index": 20, "physics": {"stiffness": 240.0, "damping": 12.0, "mass": 0.4, "resting_offset_deg": 0.0}, "constraints": null}}, "slots": {"torso": {"bone": "torso", "default_attachment": "default", "offset": [-120.0, -130.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/torso.png"}}, "head_base": {"bone": "head", "default_attachment": "default", "offset": [-160.0, -250.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "head/head_base.png"}}, "eyes": {"bone": "head", "default_attachment": "default", "offset": [-90.0, -180.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"default": "head/eyes/default.png", "happy": "head/eyes/happy.png", "wink": "head/eyes/wink.png", "blink": "head/eyes/blink.png", "focused": "head/eyes/focused.png", "wide": "head/eyes/wide.png"}}, "mouth": {"bone": "head", "default_attachment": "smile", "offset": [-50.0, -100.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"smile": "head/mouth/smile.png", "open_smile": "head/mouth/open_smile.png", "rest": "head/mouth/rest.png", "A_I": "head/mouth/A_I.png", "E": "head/mouth/E.png", "O": "head/mouth/O.png", "U": "head/mouth/U.png", "M_B_P": "head/mouth/M_B_P.png", "F_V": "head/mouth/F_V.png", "L_D_T_N": "head/mouth/L_D_T_N.png", "W_Q": "head/mouth/W_Q.png"}}, "arm_l_up": {"bone": "arm_l_upper", "default_attachment": "default", "offset": [-32.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_l_low": {"bone": "arm_l_lower", "default_attachment": "default", "offset": [-32.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_l": {"bone": "hand_l", "default_attachment": "rest", "offset": [-36.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "arm_r_up": {"bone": "arm_r_upper", "default_attachment": "default", "offset": [-32.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_upper.png"}}, "arm_r_low": {"bone": "arm_r_lower", "default_attachment": "default", "offset": [-32.0, -15.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 1, "attachments": {"default": "body/arm_lower.png"}}, "hand_r": {"bone": "hand_r", "default_attachment": "rest", "offset": [-36.0, -20.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 2, "attachments": {"rest": "body/hands/rest.png", "wave": "body/hands/wave.png", "point": "body/hands/point.png", "thumbs_up": "body/hands/thumbs_up.png"}}, "prop_r": {"bone": "prop_r", "default_attachment": "none", "offset": [-14.0, 0.0], "scale": [1.0, 1.0], "rotation_deg": 0.0, "z_index": 3, "attachments": {"none": "", "pointer_stick": "props/hologram_pointer.png", "hologram_pointer": "props/hologram_pointer.png"}}}, "viseme_slot": "mouth", "visemes": {"rest": "rest", "smile": "smile", "open_smile": "open_smile", "A_I": "A_I", "E": "E", "O": "O", "U": "U", "M_B_P": "M_B_P", "F_V": "F_V", "L_D_T_N": "L_D_T_N", "W_Q": "W_Q"}, "default_palette": {}, "palette_tokens": {"chassis_dark": "#1e293b", "chassis_light": "#f1f5f9", "neon_cyan": "#06b6d4", "core_pulse": "#00f5ff"}};
+        const ASSETS = {"body/torso.png": "data:image/png;base64,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", "head/head_base.png": "data:image/png;base64,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", "head/eyes/default.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABQCAYAAACwGF+mAAACW0lEQVR4nO3dS07DMBSF4dhCGdClsAjWziJYihlkUhRESqn6chL72vf83wgxqNuj04sbVGcYAAAAAAAAAAAAAAAAAAAAAKBPYWhJOh53f8xDaOs1tiD5zTm4DLfx0E0kjZxDSwGPH5+7LzO9v2kXO2nlHFoIuUTADwNXKHXSyzlYhlwj4LuBey510sw5WIRsEfDNwD2WOunmHAfBkP89j5oflmpI2jlHxZDdljqRc2g15Kufmp+0eq2etx/k/ONlKGnF5NtS5MvHyP6LMD/fHktNziehlalxWeTj69/P4Wvb08hav+NCj+RccA+dMTXOyzwX+bzMt35XbOr3tp8m57ofCh9NjT22GM94tE5rH1hzkXPty3aZ24xrtkzpa+upmIRyjkqXj9xdxiPndia01btYbUpPYjmbbjkuPbqasfVqB/znHBWnpPX6Kq9zMli/7D9WVlimw57XoaGTc3OF9hRuD4KznJvaQwNbUWi4QqHhCoWGKxQarlBouEKh4QqFhisUGq5QaLhCoeEKhYYrJoW2/iaL9foqr3M0WJ8JDVei2vSwnlq1jWI5lyn072Et1t+YyNXdYTPk3NaWo/a7WG06K+YcVQ54aeUgllLIuXShM/5sly511uP3st1YkHP9wxpzSrXnpFy1Zm+FnpFzpS/JzuXIPIVoKWHN86G7LvOMnE+C+pFV3V3ZuCeRc1S+vOSqzLMDOUfVsN2VeXHQzpn7FHqVuE+hSdgqdzg1kfRy5l7f3iXu9W0eeDEKU1k85+A+dOUS30LOAAAAAAAAAAAAAAAAAAAAGFz4BrZnio8fPIvRAAAAAElFTkSuQmCC", "head/eyes/happy.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABQCAYAAACwGF+mAAABpUlEQVR4nO3YQU7DMBAF0LgLb3IUuAN7DsyeO8BR2LApAiQIqIikieOJ/Z7UXRvbv6PxtMMAAAAAAAAAAAAAQEfSEFx+eDrPfe/r/W3480SVG8k5HTnYIwdfW24059RauEcIvZbcQc4pesCvdzfzn/f4HD7wGnJHOadoAS8Jdk3wPRR27jDnFCHkj0O/nMtdh2NKf67bqNxpzqnpgAMGXlruPOddvsiLh9vwytviimyhqLOcyxf075B37xYLusiRi1rOn9KuIVfsynO79RGLWs7fTkPHIV/a1x7/1W5Jzj+lQ4Q8pv/3uXKMOWKnlvOOHXpVMb8X8PRV6jNr9xmInAsV9LRrLO5yVxbjVs+a7jf66CHnGh16yRiwVSGveW6Ef1+uIecvqVjXmHuFlyrkFV/8dJ6OOEvLueIMHaaYa6wXxdhPzqdqXaPWoWesO91/tFlazpE7NGysTkHXvvprr9/LOcf91z9V+5ESXMSxQ84RO3TtrhFtH62fb9x3H2ZomqKgaYqCBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGCI6A1sLQ0yGpksJwAAAABJRU5ErkJggg==", "head/eyes/wink.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABQCAYAAACwGF+mAAACZElEQVR4nO3dPW7bMBiAYasINNRHSe/QvQfu3ju0R1EGLi4M1G5iOHFki38fn2cKMpgaXtAUbYu7HQAAAAAAAAAAAABAn6baF0AFy+Gw+WvupyZaauIi6DTiBuMW9IAhz7/+bD5M+v7cRNiCHijmOUPIN8MuHLWgB4h5LhDyh2EXjFrQgWOeK4T8btiFov5SYhDGjPnNdRS6KRV0JEtbMdeI2pJj8JjTtd2JT7p7rIzLj6dcL0xBd8x86YGQL19j9TvC8XozRW2GHmx2ThchH77+/3t6eewyVo2fKWhr6IFm5/Qq5mPIr2N+73/ZZv1M62lBB3FrdkwbLDE+49Y4uW9YBT2A9MEy45pHZulr45Uk6J41uk1XcxtP0MGlSrNlrXEFPaDpxm7Go7sdNQk6sFRxLVtrfB+sDGp62X4fugWCHtwUIOJiQc8/f5f72c9G0o9vPj3tWJagewz58tqF3aenyDcl9+htT5fMuxznGa7DmN98g6zjd5mR2bYjFEETyuZBn26mel2Lnq7bTWGf8m7bdRo1/coS9HmW7vDGyszct7zbdj6koDA3hYQiaEIRdGBz5ZvyGuMLmlAEHdxcaZauNa6ge/bvYS29fW8mZXzYjKAHMBeeLWuu3QUdRO0HvLTywBtB927F2/acOepVr+9hjWx5/ETacKa8a8xMQfuRbATHOFY+hWg+fauw4POhzzI+H9oPQiNZ2n00WKmzVqyhI9m3uY1X8uAgQUezbyvq0qdgWXJEtTinkGgWJ8kSzeKsbyJayhx8WevQ+hNr6BEtGeKuGDEAAAAAAAAAAAAAu1H9Bcyl6YcdNTvKAAAAAElFTkSuQmCC", "head/eyes/blink.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABQCAYAAACwGF+mAAAAr0lEQVR4nO3Yuw0CMRAE0D2CawZ6IKdgcnqAZi4BOTo+IdpDg94rwLJGI2vkKgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgE1Pn4fP5eq8wy+nQmkkHOa+mzpCX477SzJdbVKnl/GpXDVJDHsa9U148OW9UaPgVheavtBR6bNCxRRMlbWg5f/LL8SalzM9SNn96zgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD1pQfGHzoM5PedVwAAAABJRU5ErkJggg==", "head/eyes/focused.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABQCAYAAACwGF+mAAABsUlEQVR4nO3cPU7DQBSF0SSy3GQpLIK1swiW4sZNEAil4UcRyPab+84pKRD6dJmMicjpBAAAAAAAAAAAAAAAAADQzXK7Hf0jtLBs13k6dWO00Z2njiHnl9cvX1ufn7b6iTItNTtPiTG/C0mPznUHPWDMIS1Znc+jvWRt4f4yeD0f12MrS6/OU6ff/vego504D9F53yvHniPq/HA361z4Dv2LzqPd0zpg57KDHjHmiNawzlOnmJH35wesjTpfNv3un0+zaadAOTrvNGjYmUET5dBBd73T7m1u1Ln9CR39LmHDzm0G3emU6ty5zaDpwaCJYtBEuRz9R/+j71wxdP7ghCaKQROlxaBda/p0bjHon3hTJa9z60GTx6CJUmLQFe5eHcwNOpcYNIw16AP/o6LDqXR31dkJTRSDJopBE6XM53K833X/e8dudV/+ozm8c5lB7x3Vu4SZnYcYdOUTIckc0LncoBOijmAO7VzqoTA1cjVzcOfzEZ9jvEfQhx98Ej++YOnbudyVY8SIqdYBO5cb9IgRR7SGdj7kypEWsZxF51qh0RkAAAAAAAAAAAAAADgN6w2z+a9o5ZeCywAAAABJRU5ErkJggg==", "head/eyes/wide.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAABQCAYAAACwGF+mAAAC6UlEQVR4nO2dTW7bMBBGRSHQojlKD5Gz9xA9ynShjQMVUJsIsizR5nB+3lsFRiKSL1+GFB1TwwAAAAAAAAAAAAAAAAAAAAAAAAAAx5TBOnK7nf7e92J/PFaRGJ6Le7kOpZtB4nkuoeQ6kd4Vie25eBA8/fr98DLzx08XwrshOTwXi5LPiK0WnzHUksdzsST5FYJPCc8UasnluUQVbFW4GpLT8zgkkHy3nZY3SD2RvJ71KtRmUFqCT1WRSJVacnses0nebT9KpRY8F23RtWE+2i56yTUjVGnBc7Es+dSe54an2vAcajz/5W1oSeVUXhPk7c9WVe2lvx5DjWeFNXTleu6ZMNdcx/16Gs/fKFamwHsBvP34/3X5U9eVy+17qtJ4VqjQF6vcXpiXIH8N873Xaq9/iJcqjWf9bbveW3TR+um9/1Pjfuq+U3ihOh+hUqWDMSfxPPZc02kP/lF73/prfdmBZ5sVGiBEoI+q5aPdjNrdjkftRmRO5vm1gbY+TUcZj9V+GRjPaPVudqkO2wqx91rW3YIVPBtYclyZjtYQvzLIWZYdc0LP3BRCKAg0hIJAQygINISCQEMoCDSEokuge+/19m4/yzinDu03C7TXvV5v/fbW39b9fm2gPX3Sw/N4rPbLwHjGbNNh72lYmymZZ24KIRRjy+nj0j/UK3DpAwfWp3U826zQXQ8RTMSUxHPzQHu5C/fST+/9nxv3s02gL07Xrf+qL1/f+nJjBc99DprpcXLSU216CfQCnpWWHJtQVB/NVUmKMC/gWfGwxkV2xefF1jBqnD7qOswreP4H50N7D/NXhPOh1QNtYWsnxFJjD8HzaHmd14qQYV54x3PJ8nQmC48cU0PyetZ9p3BnUFrVOk2Yk3vmSbLREZ4k21V21GdQd0XyeO7/yz2xT/3MIy2G7GFO5rmkOIAwc5CTee7egWbSDcg1j8TzbKozT0s3JtcVgmcAAAAAAAAAAAAAAAAAAAAAAIDhHp+9NRRCvArU8AAAAABJRU5ErkJggg==", "head/mouth/smile.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAAoklEQVR4nO3VQQ7CMAwEwJSr///UnosqUYkTohKpF5h5QO16E2cMAAAAAAAAAAAA4ALrtv11/YclbgC1LBG9dPQxxriNLk0/nK4vkJTVsWasqkP/KX01kJp4i7rqxgfyzimtDw7oylpfG8jZ1VEnhjbru5O0NxCzz6s/jLxHvZqGEhLGLqaRlttSOUEc4hqaHk5gCM+im/uVhxoAAAAAYMx2B7fOMAInuXzxAAAAAElFTkSuQmCC", "head/mouth/open_smile.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAABcUlEQVR4nO3ZMW7CMBiGYVNZdMghWDp2YuACTO3EUZlg6gUydOrI0kMwtIpE5aqRogjiVNj+v8D7zFFs+Y3BBOcAAAAAAABwwcypOZ5OxcesZjLr8ODuPYbluNJBrBflqBFFJwh+EUQMQcQQRIxOEOujZ6Vx9NUJYrkolUYMAABwQ4qfLua7jyTvjJaPT9Fr3r8OKYZy36/PxdbJuwlZjohw6fpUcXLztxhi6B7qYUyDNJt19JrV/jPpmCFM/bKIXue3b86C1i/1zDFy33eSQbpfkFZPYUx3XiW/0KV3yCrzU6y6S0yCKO8Sb7g7ZHaIShQvMA+zIP2nr78Y9YiT0DX69++Pb7E7zHdILEopKjEkPrKGotSZdkn3vkoxApl/ys6942r+fjimPBG1Mc7tRusYgfkExr54bDbrq8KEEEMfiQoxAolJ/PeNcDMyTiyCUoiW1GRyvaqfQoiW5KRyhlEN0ZKeXIpA6gEAAAAAd39+ALSJeQKiFYFHAAAAAElFTkSuQmCC", "head/mouth/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAAfUlEQVR4nO3VsQ0CQQwEQENwzUAP5BT8+fcAzXwCckBASLRGmqlgdatbVwEAAAAAAAAAwK9ONcTaHq90huN+jb9HPMCnjON2SceotT/jpZwrbEoZrXOkf2q8EL4pZJh4Ib3Zvd0TrAE3ZMRRb+ntbukyAAAAAAAAAADqX7wB2jcdDOg4T+wAAAAASUVORK5CYII=", "head/mouth/A_I.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAABg0lEQVR4nO2aPVLDMBSEnxlNKHIIGspUKnQBKqhyVCqouECKVClpOAQFGWbCuAgTMrYRivx2bfar7WitT8/WT8yEEEIIIYQQQvxrGmPh/XBAR7BlA++PK2OAQQZJDrwQgk5gyoMXIn4gIWRICBkSQgZeCMFUkykPXgiTlCVJDiGEEEIIIeaNy7x78bTj2tG9gP3Dqpn/wlB8E2yCxOvb7Gu3H682JcIcJfTdNwU5ECGf67us69LzW9V2T+Vs7m+y7gmPL+YJ5BuS85CpsoyS3/eW4SbkrzOTNLKM0nbGnmFRzrKSkwxUezRCzkdX1+sggTqnq93zfB7VAa8QxDuaPZerkK5RxiYldOTxqg5IhTBLCWAZVB/1tjM2mWuD2rTtsgwK2KH+0IZjLFyVlzC0eveuDmiFDD3s1mmLg01GC8XfXvqqJY5YKX0yUCKohOScmcQKcn6rPLSMFniAksOsWHn7nUHEEZogiFPGPZGII3SBxpbDKOEU6nA1BLELEEIIIawSXyIIfcTCYRdgAAAAAElFTkSuQmCC", "head/mouth/E.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAAzElEQVR4nO3YIQ7CMBQG4G5Z8DjuAHdA4FAcFYXjFhwCh28WQIEYCYq8tuP75LZkr/33uuSlBAAAAAAAMG9diZcuTpdHakTeb0L3qE/BWgqjRL2hgbQWRom6uxKLytv1+3q/XH08e79di95/GY7n8OMrpENa7YzxsAtfR196kbUbg+sND4TvBFIZgVRGIJURSGUEUhmBVEYg/x7IdBxRuyG43n6OI+xfKTHLCt2oVmdakR9V6JHVaqfkwLrD/yGthZIbqxcAAAAAAEhTT+DDPCQ5n2tTAAAAAElFTkSuQmCC", "head/mouth/O.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAABWUlEQVR4nO2bMRLCIBREgTaVnZ23yB08sXfILezsrGgTx8YZJSAGYnbJvjIJGfwPNhmIxgghhBBCCCGEEAIHa5jx0xQ911nK32abktCAHNu0CEIxzuxFRs37rAj2iPHpArrDMXpuvN8oZwtkp1IyUhJ+lgMohSOyCmSUtNsCxzI7XGFRZ9sDPlMsu4z+cg2ODefTb/EFFF0wHYkJcREZcyJyxQRSgIS4VmWkrgvuCxRdWEIyyJWx9PqtoRLSLywukxTHFle1QI0tHCErj/KeZJbQCNkLEgKGhIAhIWDQCBkSyyH/aL8/IR/LF+O3/YxCUJdPcISsOMoHktlBJ2RJcZlk4Anp8mIrt8iMq70wHXnhtR+yix1Dhs0pvMhKFKn0rYtBBq6QCEulrP0KXRO4EfKGvssCxVfcqwCMKb7I6ioVEVzGE/gOBujrd2B8e/8PEUIIIYQQwrTPAx17jTZzNNbnAAAAAElFTkSuQmCC", "head/mouth/U.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAA6klEQVR4nO3asQ7CIBhFYWBlcvP9n87NibU1jkZ/o4G299LzrUqCHCBpY0oAAAAAAAAAAABzy8lZW9fws5otf1ueKsIEcUqaPUbPuAP4BGmdi2oSxeMot8+LWS7XcMhyv1leX9KTi2J8C/FTGOEoZeYY4feFry/tIJ0xescdQTdI23gXi54S3SCDd7nLKbEJchYEEUMQMQQRYxNkiZ68dxq/F90gdeOnadGndd0gA3e5y+nQD1Lfd/G/i+v2Lkt2Yi942yuoDXjVIXwyPK6skYtpEMMrSM+imsR4spnoWf51AgAAAAAAgBR5AKmHSCgbmkKiAAAAAElFTkSuQmCC", "head/mouth/M_B_P.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAASElEQVR4nO3RsQ0AIAwDwYSW/UelhhWookS6W8CSPwIAAAAAAAAAABguyxfPvTHNzrKfVtUQfwRpRpBmBAEAAAAAAAAAgJjuATHuAwoLga3tAAAAAElFTkSuQmCC", "head/mouth/F_V.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAAoElEQVR4nO3YIQ7CMBgF4G5Z8DjuAHdA4FAcFYVDcAe4Aw6/ECBBLDtB+5J9n2pq2vTlVfylAAAAAAAAAMvVlQCry/1bQozHXdM36dKCGPfb+ve4PWKC6VscSmBD5u14nw7T/uf1rH6Xfr2Z1sP52rQlGhJGIGEEEmYoYfrZf75EGhJGIGEEEkYgYeJGJymMTvgz7Q2b9gIAAAAAAECp6QcEFB1HE9Z7wgAAAABJRU5ErkJggg==", "head/mouth/L_D_T_N.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAABcklEQVR4nO2YvU7DMBRGHRQBUh6iCyMTA+reCaY+aqcydUcZmBhZeIhKUEUqCmqkKGoLdozvZ3LO7Oja9+Re/zgHAAAAAAAAAAAAEEDh1Nju98ljVoVMHi7c1GVYxpUWYp2UrYYUHSHwDULEQIgYOkKsTzqVxklLR4hlUioNGS0yEwlhvvk4eTJ6Xlxnubbiv4nIXYxWy4osI2S8NVkJmQcmNycpycv5cv0alJy7q5vRsV8+34K+2z3eJstTVhUyBRAiRmkZvFkufj/46T1pvHK1cZOokH4/9ll0/TAbFdfn+/68Uu4f2bWsOlDKWJmTEuLbGmrP5PqOt2pVHWa32OHx12s/OXB/Zl8JqYqhjNTtqsX0WSGGlFgoyDBvWcNFl0btQkVGi8TD27Hbe5OgWo79AJYyZIT89KTSRJRzrgqtZbSYTyDkrauJfMFTENEhM5FYj5A+KInokJvQX8tRlNBHenIxBKkLAAAAAAAAAHB9vgCbt3ecG37jsAAAAABJRU5ErkJggg==", "head/mouth/W_Q.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAYAAACqNX6+AAAA10lEQVR4nO3ZMQrCMBSH8ZcgwbvoAbo5uHlgNwc3D6B3KVkUwSEIUWyh5p/3/VYFX/14hbRmAAAAAAAAAAAAAPwKJiwdr/faZ/mwlby20FsI9TBSw77HyLuN1aTzTTKKzKBljE8hamFUokTrOEb5/V9uc/8Ue46hGEUiiCex9+1Q25LV0j84nMavf8hlvw5e52l+Q7whiPdb1pLrrzhP8xuSXwe68uQ9hcoBsfkg3kgEyTO3RGU7ZILMiaIU40liyBJPexuUeB/SptThG0MAAAAAAAAAsCkeDA9ZTKSNH2kAAAAASUVORK5CYII=", "body/arm_upper.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABkCAYAAAA2VDb+AAACZElEQVR4nO2cMYsUQRSEq4vBdFE4zAwEA8UNlMsFQ3+Cf87MwB9gKJjLGSgaHFxgdgjKRoKJRgOyzs622696eqz+wtvueq9q+ma7h5sDOp1Op+NLqllsc/vBr9yxu+tPVXpLLZleIoxU0/j9lxfZ8z8/f1wliKQ2/i+mc8OIDCK1bLxGEAnB5hXG54IoDYFrM79fp/QmSwRRy3x0PZZMHtOvbX5krFuyCghzuNarH7UKCHOGJYpO7fJGaq+ooQXTh8bVCGNoxfjcXGUQPHXiuAObM1hiPldn/OzUHeEAAVHGa6yGVCqw/3WYY/7L1fuDn925++jo/P1aJecBIohc43Pmc8fk1lvkNDhFjqFTV8Tip8FjTZSYPzY/4nkAIaTUfLSOLIBNwIPPpeoSIqKvmmoVEOZQsQxVV2tKt5lHYmuFMGdQF9iePy3W+PDuDVa5ArYB5iN1qgawDW5aFUIqFZi6C29u3YSK3bfvf/+shdNgDfMKfcIcwhzCHMIcwhzCHMIcwhzCHMIc1tirt6xPCFCd3xW6hIjoZlWhEkKimlY+ERogRtl8BIQ5hDmEOYQ5hDmEOYQ5hDmEOYQ5hDmEOYQ5hDmEOYQ5hDmEOUPtgmdvL4+O+frkHv6rAM4yTB8arw5jaMn4nIYqCLZsXqkXFsBu4k/UVM1O6Tbxysyf/HjxCkqi9bkm84o6jBCp9U+PFHVTTCvAjdcfq7839PPZw7bfGlsDhDmEOYQ5bOmGtEQ9whxGitVaBZF1iGDUIUTrEwJUISh0CRHRzapCTahAyTZZ/SuVUJmcMGp/pXY6nU6nA09+A1Gi+REAJ5tmAAAAAElFTkSuQmCC", "body/arm_lower.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABkCAYAAAA2VDb+AAACa0lEQVR4nO2csU4bQRRF71xZtFbSREpBD3QRHZEo8hf5Bj6Hb+AvKJCgQ+mCexdIaYLcpnG0UVaCxetZe9573tWd03l5fjP3zvNqBs0MUKlUKhVdUnSD80+n61zM6tdTWL/SGAQf0pAULfzk5kf2u4vvX8KMSN7Chwje1RBLIxKcxFsI32aElQnERMR381q8W8wMiBDvZQJhiLd4j3ZYmqAdhSjxLW17pVVAiEOIQ4gzi26wb5b3msj3SbJIknsRDhHdRy5n6YQowXEeUCK8S1/eUgNY1q33nWg7Zym+L6/FdDjBEKvp6RCs1gIJxuRMmH/88Obz5+tbPF99e/Ns9ftlaxuWq0EiSHwjvCt+31jLSktR4vtoRjv3d89KIJwZOupe3w9fDu/a+SGj2JdndMthz5HzqgRCHJYm2FSGXqO1KW/9f8DUVoPLx/vuo/Wy8+D4/GtYf3hg8UVxk6qA5X9RR3c/s7F/Ls/+xUdUAscm/nVcRCVwbOKjTSDEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcQhxCHEIcShdwPtNpdm28sutPHe22SIAHY1IUp86CapRkyz3WWoCVFb5YhAhoqK3Cc4QzBdccvFQzo+uQg7atOFEIcQhxCHpQk2nfjInfrau60NeUdxcHLK0CuxdRV4VRUtkvSVoVWn+/JM4tjcqtAEr5E3N2C1ZTT2FeF9aNK8AnImDDUiFzvam6QiTpFb3ydGOOB1+5tHXsIJ6856mZoQQMlPwvtyxQTxGyUrlUqlUqlUKhVo8hfZsQGpdmquuAAAAABJRU5ErkJggg==", "body/hands/rest.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAB5UlEQVR4nO2bu03FMBSGY4veJbdKQYmUAokJWIYBmIMBWIYJkCgiUVKkupSeACokFHD8OC8b/V95kzj2l2PnOPadJgAAAAAAAAAAAIyFs65AuLz+zJ0TP97M6ul6ldKLLDeCFEtZfhpUjmS5PxF9AqGgAdv7a7ac+erGLJqchZytQEqLLAlJTlPORhBTKopbkh9RzlF53OMSq+3wR+W4xZRGE1ck+dHlpO7DFUlir/lNSY70/fwo+YhVvVwPXWu5vUseW1+eTccjdkFbhZwjMRRRe0kUQSpTDaqclvO58BbRszQ2tvS6fT0oY5F6BC3ESNCOpAvNmy0HjTs/Pv367fRwnyyndvBWj6BAGJxL5Bz9rtnNvHX0nDMSUse1uprZW6wmQiiRNLSgEYCgDBCUAYJ6FnRK5Dmt5w0taE0kdrnGp453nyjG3Qy5ZGmmVgIlcrhm9KTPHaEhm+ZI8Eqih0uQ+hi0EruGVtdiERQbu1lrI0uv+xcfzNZKSdqR8w2+SWdwo6+JSS8gsnSxaLgDTLpeYmPQTMiLerqfl3xas5IkybV5N+ruDq0tMOxdLCYqxx1NWvuDsMMsA/YoZlB5PQfB3R/SKYbKVCMKNUIj/8JO+wzmGXDo/L8aAAAAAAAAAADA1Btfrtf27mlU/doAAAAASUVORK5CYII=", "body/hands/wave.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAB5UlEQVR4nO2bMU4DMRBFNxG9q4jOBRINHSfg7JyALg0SxXYo1Z4ABNVqifzX9vwZB/3XJNnYifdl7I1nkmkSQgghbpUD40XT/dPX+vHyeT6M1K6G42RM2gxytGOhglJhQOvnotqFTrG0Gcj88fZ7mx+ei/282rVON/Mpth7k9v4o7cIF/SckCCBBAAkCSBBAggASBJAggAQBJAggQQAJAkgQQIIAEgSQIIAEASQoQlBe5YNLOeSodmF1sQQqCNYJ+r301MdMI2gpDISZoG8d0zBr0HzlZCyOIUkWlVX6FJuNyi8lrk1FCznUwmGtnNPr+59jl5fHcEn0ymqLmFZRVtVU8zUoNda/98ipaTf8jxdqoqf2pPe0Z6x3Id+kT40R0dovVFAyCGMmveMzj6AZhHlvFKD+1tNMm1WABAEkCCBBowm6VGwfGP1rUQR5C8o7klytUbCnn1WSzUzQ0rghrJXUKvUmEma9J+297pinO5JBoqw3H8TKCd31dF4PonfPw4iSYfJBHotl1PsdmZ9WdpLEzEnTyz6ZLIkphzLFFkdJbDmul/lsLMlr+lL+kvlD6arWk9QqibGOHqqg2np9T7QwxLgJYuetmXLcBDFEscWECLIQ5SUmVFCtLG8pQgghhBBCTIhvy+AI6xyAodcAAAAASUVORK5CYII=", "body/hands/point.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAACNElEQVR4nO2bPW/CMBCGHVSxemTLwFaYunXryD/tf2Ds1qlMZWTIxuihCwsVqG4pJLl83Hv2oXskhIKlgB/uzhcHnDMMw7hD/GxxdF/H38f5WCEF9wn9j4iw+7wdmy/Pz2G/ZX9fFAVSzvTtT9LhZalS0kRCzuVxHNeSciyC/MDJapDEFkH3ymhBfmQU5B5FFkHSgoI7/Fu1IvE4jmvhAXHS4A7Ou+mNJG1yoCkWrmRolAOLIO1SLrEiTWCCCEwQgQkiMEEEJojABBGYIAITRGCCUl5qcO0Jpdy/zkJQH4HSstSlmJ8tRO+xqRMUkZKURYpVu03jWDl/apWETrksBHWVVycLLUlVilW7TW20IdNNlaCIpCSVgiQlqRUkJSmbIr16v53X+rnoJKltpbuLCFrVyGl7nYIzipILenz9aB3vIqmtj0ouKFz1IFS4X45TcsZGUrYRVDZIGiJnqCSuNGMp0mG/La4/ELJwShbr5DUod5IIqoBFlRvRPqhSJAYuqCJknJrAPoW3S9OIIGkNWnecdCo5WRTpNTH5lHKggsoeS26ThD5yUG0FWw0KNb1QH7gjhWuXMXmK5Q5UUCnUTavZ7giZ/IOH83PAU6wERxH6/BOJb68ETaLuvNxRDImgICBJQg72l/Z7nCQpOSfgRdU39EZDLlybBCMXB5FVxxMN5NB78xIrp9iy7AE39STaCrFOOjBPRqrnStLY+RHRJN2MJu98fQdZuXTohmEYhmEYhuEi35sS5EtHIlEIAAAAAElFTkSuQmCC", "body/hands/thumbs_up.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAB70lEQVR4nO2csXKDMBBEwZNepTsKSrvK/3+Eq6R0oS6lWjfOUKRRQAJzq7vD+0ogI3jsiRO203WEEKJHjx4gnC/PfFv6+YaPK0XfUoxHUSctOVuOO5SgsPGirUvq4fPN/ev/cePVTblBSqwkp7T90IJClp6ahHy/1VKDJCitTIiHJEFL7AhQUAUKqkBBKp30eBU97pAJSt1j1/73aBS7h2s5Ex/oAZIjGXNwkq5AQdoltoWl9ZjmSt+UoDXiWstyV2LhfHm2XPm7E9RalKkSi/fb7PZh/Fz8m0kSsuxcJCjeb4vyJpBJciFojSiUJFeCaqIQklwK+qOFJNeCWkhyL2iiNIGbFTQUHs1z+6UvUipF0AQNC5Jq8iylqLdwt6LQxc2J39tEqs9BUfDOI1IEERRXnihycjVTYiErr/yi52KPFpOPuafM4IvV6CAlpucg61BQBQqqQEEVKKgCBVWgILSglDVhiIWoVpM4wQRpCBqUUoQYV0RQMvoteYnzUnuj6GU8MUHJWIqkzkfllauncU7ouzaAJSFes0ITlBpKQstR+UlmFHiBtiQcMQ9CJ9ZQ+LTjFVGlJKIeEiq/et4qqlaiyCdok0dzAH5/B91eNO1dgqCoVn2XSnMXdohq3ZCqd7/hIP+AgBBCCCGEdO/FL1MQznbbkwaIAAAAAElFTkSuQmCC", "props/hologram_pointer.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAC+CAYAAAAm2W9xAAACVUlEQVR4nO2cMU4bQRiFd54QCBqUNJwhiCqVz8ABKNLlZOlS5ACcwVUqBGdIk2ibIGhAVrRgDeP3/+N9WKC8T7LsHc2+b2fs3RmN5BkGYzopvSccn5w+1GXjr+t0DubKWPksYRSalZZtZMcfPzx9Hn//6epeZISbZK3jiG7hXGChGsgTAyyUA30kx0I50EdyLJQDfSTHQjl72Yq33378eyd1Dr9ezJ8m7l9epSe5E/fnZ+V9/Gj2t2hddN7bauFrgFdJJVgoB/pIjoVyoI/kWLjbLr0nA+m252HYMSW7EjXNaYZgTjMGK1HdS1+tlaf15a9RvfQ1F1ioBvLEAAvlQB/JsVAO9JEcC+VAH8mxUA70kRwL5UAfybFQDvSRHAvlQB/JsVAO9JEcC+VAH8mxUA70kRwL5UAfybFQDvSRHAvlQB/JsVAO9JEcC+VAH8mxUA70kRwL5UAfybFQDvSRHAvlQB/JsVAO9JEcC+VAH8mxUA70kRwL5UAfybFQDvSRHAv/wy4d600bquOI9L8NMttQZDbkSLcwCsvu/oGskIX2bDViTDelpzK7F7O/1DJX1CuGUpapX3pP/vT954t6N18+p1tasrJJtFwcvKi7WN41xWNDirmy9fK69a0eCr/DSBZJQ2HrqmrZw9Hzi9Vr5dEWrq62JWPHy8UBbWXX8FSHR+Xvc06zU2H521feLVzdyNNNvSm8Pl4s75pPno3C1tOhJZ1erF4rL+zS6WpbYZnHW01TWF9VJO15lpbhrYwW246H0SAcfoe9k9xR8bdc5ZzGDGoeAbSMvE+/qhy3AAAAAElFTkSuQmCC"};
+
+        // Preload images
+        const loadedImages = {};
+        for (const [relPath, b64] of Object.entries(ASSETS)) {
+            const img = new Image();
+            img.src = b64;
+            loadedImages[relPath] = img;
+        }
+
+        // Runtime Rig State
+        const state = {
+            joints: {
+                head: 0,
+                arm_l_upper: 0,
+                arm_l_lower: 0,
+                arm_r_upper: 0,
+                arm_r_lower: 0,
+                torso: 0
+            },
+            attachments: {
+                hand_l: "rest",
+                hand_r: "rest",
+                eye_l_sclera: "default",
+                eye_r_sclera: "default",
+                prop_r: "none"
+            },
+            viseme: "smile",
+            gaze: { x: 0, y: 0 },
+            blink: 0,
+            simulatingSpeech: false,
+            time: 0
+        };
+
+        const canvas = document.getElementById("mascotCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Gaze tracking listener
+        canvas.addEventListener("mousemove", (e) => {
+            if (!document.getElementById("chk-gaze").checked) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = ((e.clientX - rect.left) / rect.width) * 800;
+            const mouseY = ((e.clientY - rect.top) / rect.height) * 800;
+            state.gaze.x = Math.max(-10, Math.min(10, (mouseX - 400) * 0.04));
+            state.gaze.y = Math.max(-8, Math.min(8, (mouseY - 350) * 0.04));
+        });
+
+        function setViseme(v) {
+            state.viseme = v;
+            document.querySelectorAll('.section .btn').forEach(b => {
+                if (b.id && b.id.startsWith('v-')) b.classList.remove('active');
+            });
+            const btn = document.getElementById('v-' + v);
+            if (btn) btn.classList.add('active');
+        }
+
+        function setEmotion(em) {
+            document.querySelectorAll('.section .btn').forEach(b => {
+                if (b.id && b.id.startsWith('e-')) b.classList.remove('active');
+            });
+            const btn = document.getElementById('e-' + em);
+            if (btn) btn.classList.add('active');
+
+            if (em === "smile") {
+                state.viseme = "smile";
+                state.attachments.eye_l_sclera = "default";
+                state.attachments.eye_r_sclera = "default";
+            } else if (em === "open_smile") {
+                state.viseme = "open_smile";
+                state.attachments.eye_l_sclera = "default";
+                state.attachments.eye_r_sclera = "default";
+            } else if (em === "happy_eyes") {
+                state.viseme = "open_smile";
+                state.attachments.eye_l_sclera = "happy";
+                state.attachments.eye_r_sclera = "happy";
+            }
+        }
+
+        function applyPose(name) {
+            // Reset to defaults
+            state.joints = { head: 0, arm_l_upper: 0, arm_l_lower: 0, arm_r_upper: 0, arm_r_lower: 0, torso: 0 };
+            state.attachments = { hand_l: "rest", hand_r: "rest", eye_l_sclera: "default", eye_r_sclera: "default", prop_r: "none" };
+            state.viseme = "smile";
+
+            if (name === "point_up_right") {
+                state.joints.torso = -3;
+                state.joints.head = 6;
+                // Right arm raises up-right towards target
+                state.joints.arm_r_upper = -135;
+                state.joints.arm_r_lower = 15;
+                state.attachments.hand_r = "point";
+                state.attachments.prop_r = "pointer_stick";
+                // Left arm on hip
+                state.joints.arm_l_upper = 25;
+                state.joints.arm_l_lower = -30;
+                state.viseme = "smile";
+            } else if (name === "point_up_left") {
+                state.joints.torso = 3;
+                state.joints.head = -6;
+                // Left arm raises up-left towards target
+                state.joints.arm_l_upper = 135;
+                state.joints.arm_l_lower = -15;
+                state.attachments.hand_l = "point";
+                // Right arm on hip
+                state.joints.arm_r_upper = -25;
+                state.joints.arm_r_lower = 30;
+                state.viseme = "smile";
+            } else if (name === "happy_wave") {
+                state.joints.head = 8;
+                // Left arm raises high outside the body (+125 deg)
+                state.joints.arm_l_upper = 125;
+                state.joints.arm_l_lower = 25;
+                state.attachments.hand_l = "wave";
+                state.attachments.eye_l_sclera = "happy";
+                state.attachments.eye_r_sclera = "happy";
+                state.viseme = "open_smile";
+            } else if (name === "thumbs_up") {
+                state.joints.head = -4;
+                state.joints.arm_r_upper = -50;
+                state.joints.arm_r_lower = -55;
+                state.attachments.hand_r = "thumbs_up";
+                state.viseme = "open_smile";
+            } else if (name === "thinking") {
+                state.joints.head = 12;
+                state.joints.arm_r_upper = -115;
+                state.joints.arm_r_lower = -90;
+                state.attachments.hand_r = "rest";
+                state.viseme = "smile";
+            } else if (name === "surprised") {
+                state.joints.head = 0;
+                state.joints.arm_l_upper = 70;
+                state.joints.arm_l_lower = 40;
+                state.joints.arm_r_upper = -70;
+                state.joints.arm_r_lower = -40;
+                state.attachments.hand_l = "wave";
+                state.attachments.hand_r = "wave";
+                state.viseme = "O";
+            } else if (name === "rest") {
+                state.viseme = "smile";
+            }
+            syncSliders();
+        }
+
+        function syncSliders() {
+            document.getElementById("sld-head").value = state.joints.head;
+            document.getElementById("val-head").innerText = state.joints.head + "°";
+            document.getElementById("sld-r-sh").value = state.joints.arm_r_upper;
+            document.getElementById("val-r-sh").innerText = state.joints.arm_r_upper + "°";
+            document.getElementById("sld-r-el").value = state.joints.arm_r_lower;
+            document.getElementById("val-r-el").innerText = state.joints.arm_r_lower + "°";
+            document.getElementById("sld-l-sh").value = state.joints.arm_l_upper;
+            document.getElementById("val-l-sh").innerText = state.joints.arm_l_upper + "°";
+            document.getElementById("sld-l-el").value = state.joints.arm_l_lower;
+            document.getElementById("val-l-el").innerText = state.joints.arm_l_lower + "°";
+        }
+
+        function onSliderChange() {
+            state.joints.head = parseFloat(document.getElementById("sld-head").value);
+            state.joints.arm_r_upper = parseFloat(document.getElementById("sld-r-sh").value);
+            state.joints.arm_r_lower = parseFloat(document.getElementById("sld-r-el").value);
+            state.joints.arm_l_upper = parseFloat(document.getElementById("sld-l-sh").value);
+            state.joints.arm_l_lower = parseFloat(document.getElementById("sld-l-el").value);
+            syncSliders();
+        }
+
+        let speechTimer = null;
+        function toggleSpeechSim() {
+            state.simulatingSpeech = !state.simulatingSpeech;
+            const btn = document.getElementById("speech-btn-label");
+            if (state.simulatingSpeech) {
+                btn.innerText = "⏹ Stop Simulation";
+                const phonemes = ["smile", "A_I", "E", "O", "M_B_P", "L_D_T_N", "F_V", "open_smile", "W_Q", "smile"];
+                let pIdx = 0;
+                speechTimer = setInterval(() => {
+                    setViseme(phonemes[pIdx % phonemes.length]);
+                    pIdx++;
+                }, 130);
+            } else {
+                btn.innerText = "▶ Play Lip-Sync Audio Simulation";
+                clearInterval(speechTimer);
+                setViseme("smile");
+            }
+        }
+
+        // 2D Matrix Transforms
+        function computeTransforms() {
+            const transforms = {};
+
+            function solveBone(boneName) {
+                if (transforms[boneName]) return transforms[boneName];
+                const cfg = MANIFEST.bones[boneName];
+                let parentMat = [1, 0, 0, 1, 0, 0]; // Identity
+                if (cfg.parent) {
+                    parentMat = solveBone(cfg.parent);
+                }
+
+                const pos = cfg.position;
+                const rotDeg = (cfg.rotation_deg || 0) + (state.joints[boneName] || 0);
+                const rotRad = (rotDeg * Math.PI) / 180;
+                const pivot = cfg.pivot || [0, 0];
+
+                let extraY = 0;
+                if (boneName === "torso" && document.getElementById("chk-breathe").checked) {
+                    extraY = Math.sin(state.time * 2.5) * 3;
+                }
+
+                const c = Math.cos(rotRad);
+                const s = Math.sin(rotRad);
+                
+                const a = c;
+                const b = s;
+                const d = -s;
+                const e = c;
+                const tx = pos[0] + pivot[0] - (c * pivot[0] - s * pivot[1]);
+                const ty = pos[1] + extraY + pivot[1] - (s * pivot[0] + c * pivot[1]);
+
+                const pa = parentMat[0], pb = parentMat[1], pd = parentMat[2], pe = parentMat[3], ptx = parentMat[4], pty = parentMat[5];
+                const outA = pa * a + pd * b;
+                const outB = pb * a + pe * b;
+                const outD = pa * d + pd * e;
+                const outE = pb * d + pe * e;
+                const outTx = pa * tx + pd * ty + ptx;
+                const outTy = pb * tx + pe * ty + pty;
+
+                transforms[boneName] = [outA, outB, outD, outE, outTx, outTy];
+                return transforms[boneName];
+            }
+
+            for (const bName of Object.keys(MANIFEST.bones)) {
+                solveBone(bName);
+            }
+            return transforms;
+        }
+
+        // Main Animation & Render Loop (60fps)
+        function loop() {
+            state.time += 0.016;
+
+            if (document.getElementById("chk-blink").checked) {
+                const blinkCycle = state.time % 3.5;
+                if (blinkCycle > 3.35) {
+                    state.blink = 1;
+                } else {
+                    state.blink = 0;
+                }
+            }
+
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const scale = canvas.width / MANIFEST.canvas_size[0];
+
+            ctx.save();
+            ctx.scale(scale, scale);
+
+            const boneTransforms = computeTransforms();
+
+            const slotList = [];
+            for (const [slotName, slotCfg] of Object.entries(MANIFEST.slots)) {
+                const bone = MANIFEST.bones[slotCfg.bone];
+                const z = (bone.z_index || 0) * 1000 + (slotCfg.z_index || 0);
+                slotList.push({ name: slotName, cfg: slotCfg, z: z });
+            }
+            slotList.sort((a, b) => a.z - b.z);
+
+            for (const slot of slotList) {
+                const sName = slot.name;
+                const cfg = slot.cfg;
+                const mat = boneTransforms[cfg.bone];
+
+                let attKey = cfg.default_attachment || "default";
+                if (sName === MANIFEST.viseme_slot) {
+                    attKey = MANIFEST.visemes[state.viseme] || state.viseme || "smile";
+                } else if (state.attachments[sName]) {
+                    attKey = state.attachments[sName];
+                }
+
+                if ((sName === "eye_l_sclera" || sName === "eye_r_sclera") && state.blink === 1) {
+                    attKey = "blink";
+                }
+
+                const relPath = cfg.attachments[attKey];
+                if (!relPath || !loadedImages[relPath]) continue;
+
+                const img = loadedImages[relPath];
+
+                ctx.save();
+                ctx.transform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
+
+                let px = 0, py = 0;
+                if (sName.includes("pupil")) {
+                    px = state.gaze.x;
+                    py = state.gaze.y;
+                }
+
+                ctx.drawImage(img, cfg.offset[0] + px, cfg.offset[1] + py);
+                ctx.restore();
+            }
+
+            // Draw skeleton gizmos if enabled
+            if (document.getElementById("chk-skeleton").checked) {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "#38bdf8";
+                ctx.fillStyle = "#f43f5e";
+
+                for (const [bName, cfg] of Object.entries(MANIFEST.bones)) {
+                    const mat = boneTransforms[bName];
+                    const x = mat[4];
+                    const y = mat[5];
+
+                    if (cfg.parent) {
+                        const pMat = boneTransforms[cfg.parent];
+                        ctx.beginPath();
+                        ctx.moveTo(pMat[4], pMat[5]);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        loop();
+    </script>
+</body>
+</html>

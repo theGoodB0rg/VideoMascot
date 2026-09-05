@@ -60,6 +60,10 @@ class MascotProceduralConfig(BaseModel):
     
     gaze_saccades: bool = Field(default=True, description="Enables subtle lifelike pupil micro-movements")
     bounce_on_speak: bool = Field(default=True, description="Enables secondary micro-bounce during speech visemes")
+    hover: bool = Field(default=False, description="Enables multi-harmonic levitation hover dynamics for tech bots")
+    hover_amplitude: float = Field(default=6.0, ge=0.0, le=30.0, description="Vertical levitation drift amplitude in pixels")
+    hover_bpm: float = Field(default=22.0, ge=5.0, le=60.0, description="Levitation hover cycles per minute")
+
 
 
 class SpeechCue(BaseModel):

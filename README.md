@@ -6,43 +6,46 @@ A modular, scalable, test-driven, AI-ready layered puppet and mascot animation e
 
 ## 🎬 Visual Demos & Previews
 
-### 1. In-Memory Video Overlay Demo
-*Shows the mascot gesturing with a pointer stick and speaking via 9-viseme lip-sync, streamed in-memory over a background scene via FFmpeg.*
+### 1. Flagship Asset: "Nexus Bot" (Sleek Futuristic Tech Companion)
+*High-fidelity modern motion graphics benchmark with floating magnetic limbs (zero joint crease clipping), curved obsidian visor, and digital acoustic visemes.*
 
-| In-Memory Streaming Overlay Demo | Standalone Transparent Alpha Stream |
+| Nexus Bot In-Memory Streaming Overlay | Standalone Transparent Alpha Stream (Hover & Speech) |
 | :---: | :---: |
-| ![In-Memory Video Overlay Demo](preview/demo_overlay.gif) | ![Transparent Alpha Stream](preview/demo_mascot_alpha.gif) |
-| [Download Full MP4 (`preview/demo_overlay.mp4`)](preview/demo_overlay.mp4) | [Download Transparent WebM (`preview/demo_mascot_alpha.webm`)](preview/demo_mascot_alpha.webm) |
+| ![Nexus Bot Overlay Demo](preview/nexus_bot/demo_nexus_overlay.gif) | ![Transparent Nexus Bot](preview/nexus_bot/demo_nexus_alpha.gif) |
+| [Download Full MP4 (`preview/nexus_bot/demo_nexus_overlay.mp4`)](preview/nexus_bot/demo_nexus_overlay.mp4) | [Download Transparent WebM (`preview/nexus_bot/demo_nexus_alpha.webm`)](preview/nexus_bot/demo_nexus_alpha.webm) |
 
 ---
 
-### 2. Preston Blair 9-Viseme Speech Lip-Sync Set
-*Real-time speech synchronization mapping phonetic timestamps and WebVTT subtitles.*
+### 2. Digital 9-Viseme Acoustic Speech Waveforms
+*Real-time speech synchronization mapping phonetic timestamps and WebVTT subtitles directly onto emissive visor surfaces.*
 
-![Preston Blair 9-Viseme Lip-Sync Grid](preview/visemes_grid_9set.png)
+![Nexus Bot 9-Viseme Digital Set](preview/nexus_bot/visemes_grid_9set.png)
 
 ---
 
 ### 3. Kinematic Gesture & Expression Gallery
-*Analytical 2-joint Forward & Inverse Kinematics (`solve_pointing_fk`, `solve_2joint_ik`) with modular props.*
+*2-joint Forward & Inverse Kinematics (`solve_pointing_fk`, `solve_2joint_ik`) with magnetic levitation joints and holographic props.*
 
-| Cheerful Wave | Point Up-Right (With Prop) | Thumbs Up | Thinking Pose |
+| Cheerful Wave | Point Up-Right (Hologram Stylus) | Confident Thumbs Up | Thinking Pose |
 | :---: | :---: | :---: | :---: |
-| <img src="preview/pose_happy_wave.png" width="220"/> | <img src="preview/pose_point_up_right.png" width="220"/> | <img src="preview/pose_thumbs_up.png" width="220"/> | <img src="preview/pose_thinking.png" width="220"/> |
+| <img src="preview/nexus_bot/pose_happy_wave.png" width="220"/> | <img src="preview/nexus_bot/pose_point_up_right.png" width="220"/> | <img src="preview/nexus_bot/pose_thumbs_up.png" width="220"/> | <img src="preview/nexus_bot/pose_thinking.png" width="220"/> |
 
 ---
 
 ## 🌟 Key Features
 
+- **Decoupled Multi-Mascot Registry (`MascotRegistry`)**: Dynamically discovers and loads self-contained character bundles from `assets/mascots/`. The system is 100% aesthetic-agnostic.
+- **Organic Motion Dynamics & Secondary Spring Physics**: Continuous 1D damped harmonic spring-damper solvers (`SpringDamper1D`, `BoneSpringSimulator`) generating realistic inertia on antennae and props.
+- **Motion Graphics Cubic Bezier Easing**: Replaces linear interpolation with industry-standard parametric Cubic Bezier curves (`SPRING_OVERSHOOT`, `ANTICIPATION`, `EASE_OUT_EXPO`).
+- **High-Performance Bounding-Box Compositor**: Replaces full-canvas transforms with cropped local bounding-box affine blitting, delivering over $3\times$ faster rendering speeds.
+- **Floating Magnetic Articulation**: Eliminates cardboard joint crease seams during $360^\circ$ limb rotations.
 - **100% Background-less Alpha Canvas**: Pure transparent RGBA rendering with zero bounding box artifacts.
-- **Layered 2.5D Sprite Puppet Rig**: High-fidelity character models composed of modular slots (Head, Eyes, Pupils, Eyebrows, Viseme Mouths, Body, Limbs, Props).
-- **Universal Kinematic Hierarchy**: 3x3 affine matrix propagation with analytical 2-joint Forward & Inverse Kinematics (`solve_2joint_ik`, `solve_pointing_fk`).
 - **Standard 9-Viseme Lip-Sync (Preston Blair Set)**: Real-time mouth shaping for speech synchronization (`rest`, `smile`, `open_smile`, `A_I`, `E`, `O`, `U`, `M_B_P`, `F_V`, `L_D_T_N`, `W_Q`).
-- **Continuous Procedural Life Layer**: Sinusoidal torso breathing, Poisson-distributed natural eye blinks, and saccadic pupil gaze tracking.
-- **In-Memory Zero-Disk Streaming Engine**: Directly streams raw uncompressed RGBA pixel buffers to FFmpeg subprocess pipes in constant $O(1)$ memory without writing intermediate PNG files to disk.
-- **Declarative Pydantic Schema**: Direct support for YAML/JSON directives (emotions, gestures, placements, props).
+- **Continuous Procedural Life & Hover Layer**: Multi-harmonic levitation hover drift, Poisson-distributed natural eye blinks, and saccadic pupil gaze tracking.
+- **In-Memory Zero-Disk Streaming Engine**: Streams raw uncompressed RGBA pixel buffers directly to FFmpeg subprocess pipes in constant $O(1)$ memory.
 - **Standalone Alpha Video Exporters**: Export transparent videos to WebM VP9 (`yuva420p`) or Apple ProRes 4444 (`yuva444p10le`).
-- **Interactive Live Web Inspector**: Standalone single-file HTML5/Canvas preview tool (`preview/inspector.html`) to test joint angles, visemes, and poses live in your browser.
+- **Interactive Live Web Inspector**: Single-file HTML5/Canvas preview tool (`preview/nexus_bot/inspector.html`) to test joint angles, visemes, and poses live in your browser.
+
 
 ---
 

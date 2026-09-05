@@ -1,18 +1,18 @@
 {
-  "id": "chibi_tech_guide",
-  "name": "Chibi Tech Guide",
+  "id": "nexus_bot",
+  "name": "Nexus Bot",
   "version": "1.0.0",
-  "description": "High-resolution 2.5D modular tech mascot with friendly appeal and full dual-arm articulation.",
+  "description": "Flagship sleek futuristic tech companion with floating magnetic articulation and emissive visor.",
   "canvas_size": [
-    800,
-    800
+    1000,
+    1000
   ],
   "bones": {
     "root": {
       "parent": null,
       "position": [
-        400.0,
-        700.0
+        500.0,
+        800.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -32,7 +32,7 @@
       "parent": "root",
       "position": [
         0.0,
-        -220.0
+        -260.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -45,14 +45,19 @@
       ],
       "length": 0.0,
       "z_index": 10,
-      "physics": null,
+      "physics": {
+        "stiffness": 140.0,
+        "damping": 16.0,
+        "mass": 1.2,
+        "resting_offset_deg": 0.0
+      },
       "constraints": null
     },
     "head": {
       "parent": "torso",
       "position": [
         0.0,
-        -85.0
+        -110.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -65,14 +70,47 @@
       ],
       "length": 0.0,
       "z_index": 20,
-      "physics": null,
+      "physics": {
+        "stiffness": 190.0,
+        "damping": 18.0,
+        "mass": 0.9,
+        "resting_offset_deg": 0.0
+      },
+      "constraints": {
+        "min_rotation_deg": -35.0,
+        "max_rotation_deg": 35.0
+      }
+    },
+    "antenna": {
+      "parent": "head",
+      "position": [
+        0.0,
+        -145.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        20.0
+      ],
+      "length": 30.0,
+      "z_index": 25,
+      "physics": {
+        "stiffness": 220.0,
+        "damping": 10.0,
+        "mass": 0.3,
+        "resting_offset_deg": 0.0
+      },
       "constraints": null
     },
     "arm_l_upper": {
       "parent": "torso",
       "position": [
-        -65.0,
-        -55.0
+        -75.0,
+        -70.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -83,16 +121,21 @@
         0.0,
         0.0
       ],
-      "length": 70.0,
+      "length": 80.0,
       "z_index": 14,
-      "physics": null,
+      "physics": {
+        "stiffness": 160.0,
+        "damping": 14.0,
+        "mass": 0.7,
+        "resting_offset_deg": 0.0
+      },
       "constraints": null
     },
     "arm_l_lower": {
       "parent": "arm_l_upper",
       "position": [
         0.0,
-        70.0
+        80.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -103,7 +146,7 @@
         0.0,
         0.0
       ],
-      "length": 70.0,
+      "length": 80.0,
       "z_index": 15,
       "physics": null,
       "constraints": null
@@ -112,7 +155,7 @@
       "parent": "arm_l_lower",
       "position": [
         0.0,
-        70.0
+        80.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -131,8 +174,8 @@
     "arm_r_upper": {
       "parent": "torso",
       "position": [
-        65.0,
-        -55.0
+        75.0,
+        -70.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -143,16 +186,21 @@
         0.0,
         0.0
       ],
-      "length": 70.0,
+      "length": 80.0,
       "z_index": 17,
-      "physics": null,
+      "physics": {
+        "stiffness": 160.0,
+        "damping": 14.0,
+        "mass": 0.7,
+        "resting_offset_deg": 0.0
+      },
       "constraints": null
     },
     "arm_r_lower": {
       "parent": "arm_r_upper",
       "position": [
         0.0,
-        70.0
+        80.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -163,7 +211,7 @@
         0.0,
         0.0
       ],
-      "length": 70.0,
+      "length": 80.0,
       "z_index": 18,
       "physics": null,
       "constraints": null
@@ -172,7 +220,7 @@
       "parent": "arm_r_lower",
       "position": [
         0.0,
-        70.0
+        80.0
       ],
       "rotation_deg": 0.0,
       "scale": [
@@ -205,7 +253,12 @@
       ],
       "length": 0.0,
       "z_index": 20,
-      "physics": null,
+      "physics": {
+        "stiffness": 240.0,
+        "damping": 12.0,
+        "mass": 0.4,
+        "resting_offset_deg": 0.0
+      },
       "constraints": null
     }
   },
@@ -214,8 +267,8 @@
       "bone": "torso",
       "default_attachment": "default",
       "offset": [
-        -110.0,
-        -120.0
+        -120.0,
+        -130.0
       ],
       "scale": [
         1.0,
@@ -231,8 +284,8 @@
       "bone": "head",
       "default_attachment": "default",
       "offset": [
-        -150.0,
-        -240.0
+        -160.0,
+        -250.0
       ],
       "scale": [
         1.0,
@@ -244,12 +297,12 @@
         "default": "head/head_base.png"
       }
     },
-    "eye_l_sclera": {
+    "eyes": {
       "bone": "head",
       "default_attachment": "default",
       "offset": [
-        -75.0,
-        -135.0
+        -90.0,
+        -180.0
       ],
       "scale": [
         1.0,
@@ -258,111 +311,27 @@
       "rotation_deg": 0.0,
       "z_index": 2,
       "attachments": {
-        "default": "head/eyes/sclera_left.png",
-        "blink": "head/eyes/eyelid_blink.png",
-        "happy": "head/eyes/eye_happy.png"
-      }
-    },
-    "eye_l_pupil": {
-      "bone": "head",
-      "default_attachment": "default",
-      "offset": [
-        -66.0,
-        -122.0
-      ],
-      "scale": [
-        1.0,
-        1.0
-      ],
-      "rotation_deg": 0.0,
-      "z_index": 3,
-      "attachments": {
-        "default": "head/eyes/pupil.png"
-      }
-    },
-    "eye_r_sclera": {
-      "bone": "head",
-      "default_attachment": "default",
-      "offset": [
-        25.0,
-        -135.0
-      ],
-      "scale": [
-        1.0,
-        1.0
-      ],
-      "rotation_deg": 0.0,
-      "z_index": 2,
-      "attachments": {
-        "default": "head/eyes/sclera_right.png",
-        "blink": "head/eyes/eyelid_blink.png",
-        "happy": "head/eyes/eye_happy.png"
-      }
-    },
-    "eye_r_pupil": {
-      "bone": "head",
-      "default_attachment": "default",
-      "offset": [
-        34.0,
-        -122.0
-      ],
-      "scale": [
-        1.0,
-        1.0
-      ],
-      "rotation_deg": 0.0,
-      "z_index": 3,
-      "attachments": {
-        "default": "head/eyes/pupil.png"
-      }
-    },
-    "eyebrow_l": {
-      "bone": "head",
-      "default_attachment": "default",
-      "offset": [
-        -70.0,
-        -155.0
-      ],
-      "scale": [
-        1.0,
-        1.0
-      ],
-      "rotation_deg": 0.0,
-      "z_index": 4,
-      "attachments": {
-        "default": "head/eyebrows/left.png"
-      }
-    },
-    "eyebrow_r": {
-      "bone": "head",
-      "default_attachment": "default",
-      "offset": [
-        25.0,
-        -155.0
-      ],
-      "scale": [
-        1.0,
-        1.0
-      ],
-      "rotation_deg": 0.0,
-      "z_index": 4,
-      "attachments": {
-        "default": "head/eyebrows/right.png"
+        "default": "head/eyes/default.png",
+        "happy": "head/eyes/happy.png",
+        "wink": "head/eyes/wink.png",
+        "blink": "head/eyes/blink.png",
+        "focused": "head/eyes/focused.png",
+        "wide": "head/eyes/wide.png"
       }
     },
     "mouth": {
       "bone": "head",
       "default_attachment": "smile",
       "offset": [
-        -40.0,
-        -85.0
+        -50.0,
+        -100.0
       ],
       "scale": [
         1.0,
         1.0
       ],
       "rotation_deg": 0.0,
-      "z_index": 5,
+      "z_index": 3,
       "attachments": {
         "smile": "head/mouth/smile.png",
         "open_smile": "head/mouth/open_smile.png",
@@ -381,7 +350,7 @@
       "bone": "arm_l_upper",
       "default_attachment": "default",
       "offset": [
-        -30.0,
+        -32.0,
         -20.0
       ],
       "scale": [
@@ -398,7 +367,7 @@
       "bone": "arm_l_lower",
       "default_attachment": "default",
       "offset": [
-        -30.0,
+        -32.0,
         -15.0
       ],
       "scale": [
@@ -415,7 +384,7 @@
       "bone": "hand_l",
       "default_attachment": "rest",
       "offset": [
-        -35.0,
+        -36.0,
         -20.0
       ],
       "scale": [
@@ -435,7 +404,7 @@
       "bone": "arm_r_upper",
       "default_attachment": "default",
       "offset": [
-        -30.0,
+        -32.0,
         -20.0
       ],
       "scale": [
@@ -452,7 +421,7 @@
       "bone": "arm_r_lower",
       "default_attachment": "default",
       "offset": [
-        -30.0,
+        -32.0,
         -15.0
       ],
       "scale": [
@@ -469,7 +438,7 @@
       "bone": "hand_r",
       "default_attachment": "rest",
       "offset": [
-        -35.0,
+        -36.0,
         -20.0
       ],
       "scale": [
@@ -489,8 +458,8 @@
       "bone": "prop_r",
       "default_attachment": "none",
       "offset": [
-        -12.0,
-        -160.0
+        -14.0,
+        0.0
       ],
       "scale": [
         1.0,
@@ -500,13 +469,14 @@
       "z_index": 3,
       "attachments": {
         "none": "",
-        "pointer_stick": "props/pointer_stick.png"
+        "pointer_stick": "props/hologram_pointer.png",
+        "hologram_pointer": "props/hologram_pointer.png"
       }
     }
   },
   "viseme_slot": "mouth",
   "visemes": {
-    "rest": "smile",
+    "rest": "rest",
     "smile": "smile",
     "open_smile": "open_smile",
     "A_I": "A_I",
@@ -519,5 +489,10 @@
     "W_Q": "W_Q"
   },
   "default_palette": {},
-  "palette_tokens": {}
+  "palette_tokens": {
+    "chassis_dark": "#1e293b",
+    "chassis_light": "#f1f5f9",
+    "neon_cyan": "#06b6d4",
+    "core_pulse": "#00f5ff"
+  }
 }

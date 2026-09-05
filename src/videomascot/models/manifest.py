@@ -3,6 +3,20 @@ from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 
+class PhysicsConfig(BaseModel):
+    """Secondary motion spring-damper physics for a bone."""
+    stiffness: float = Field(default=150.0, description="Spring stiffness constant (k)")
+    damping: float = Field(default=12.0, description="Damping coefficient (c)")
+    mass: float = Field(default=1.0, description="Inertial mass (m)")
+    resting_offset_deg: float = Field(default=0.0, description="Rest angle bias")
+
+
+class JointConstraintConfig(BaseModel):
+    """Rotation limits to prevent unnatural joint hyperextension."""
+    min_rotation_deg: float = Field(default=-180.0)
+    max_rotation_deg: float = Field(default=180.0)
+
+
 class BoneConfig(BaseModel):
     parent: Optional[str] = None
     position: Tuple[float, float] = (0.0, 0.0)
@@ -11,6 +25,8 @@ class BoneConfig(BaseModel):
     pivot: Tuple[float, float] = (0.0, 0.0)
     length: float = 0.0
     z_index: int = 0
+    physics: Optional[PhysicsConfig] = None
+    constraints: Optional[JointConstraintConfig] = None
 
 
 class SlotConfig(BaseModel):
@@ -38,3 +54,5 @@ class MascotManifest(BaseModel):
     visemes: Dict[str, str] = Field(default_factory=dict)
     
     default_palette: Dict[str, str] = Field(default_factory=dict)
+    palette_tokens: Dict[str, str] = Field(default_factory=dict)
+

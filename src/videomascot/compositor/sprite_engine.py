@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import math
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -80,21 +81,50 @@ class SpriteCompositor:
                     img = Image.open(full_path).convert("RGBA")
                     slot.add_attachment(att_name, img)
 
+    def apply_palette_tint(self, color_map: Dict[str, str]) -> None:
+        """Remaps colors in loaded textures according to a hex-to-hex mapping.
+        
+        Useful for dynamic brand palette swapping (e.g. changing cyan visor glow to amber).
+        """
+        def hex_to_rgb(h: str) -> Tuple[int, int, int]:
+            h = h.lstrip("#")
+            return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+        import numpy as np
+
+        parsed_map = {hex_to_rgb(src): hex_to_rgb(dst) for src, dst in color_map.items()}
+
+        for slot in self.slots.values():
+            for att_name, img in slot.attachments.items():
+                if img is None:
+                    continue
+                arr = np.array(img, copy=True)
+                for src_rgb, dst_rgb in parsed_map.items():
+                    diff = np.sqrt(
+                        (arr[:, :, 0].astype(float) - src_rgb[0]) ** 2 +
+                        (arr[:, :, 1].astype(float) - src_rgb[1]) ** 2 +
+                        (arr[:, :, 2].astype(float) - src_rgb[2]) ** 2
+                    )
+                    mask = (diff < 45.0) & (arr[:, :, 3] > 0)
+                    if np.any(mask):
+                        arr[mask, 0] = dst_rgb[0]
+                        arr[mask, 1] = dst_rgb[1]
+                        arr[mask, 2] = dst_rgb[2]
+                slot.attachments[att_name] = Image.fromarray(arr, mode="RGBA")
+
     def render_frame(
         self,
         pose: PoseState,
         target_size: Optional[Tuple[int, int]] = None
     ) -> Image.Image:
-        """Renders a single frame of the mascot at the given pose."""
+        """Renders a single frame of the mascot at the given pose with local bounding-box blitting."""
         # 1. Apply pose parameters to bones
         for bone_name, bone in self.hierarchy.bones.items():
-            # Reset to base manifest config
             cfg = self.manifest.bones[bone_name]
             base_pos = Vector2D(*cfg.position)
             base_rot = cfg.rotation_deg
             base_scale = Vector2D(*cfg.scale)
             
-            # Apply pose overrides
             if bone_name in pose.joint_translations:
                 dx, dy = pose.joint_translations[bone_name]
                 base_pos = base_pos + Vector2D(dx, dy)
@@ -125,30 +155,57 @@ class SpriteCompositor:
                 v_att = self.manifest.visemes[pose.viseme]
                 v_slot.set_active_attachment(v_att)
 
-        # 5. Composite layers sorted by composite_z
+        # 5. Composite layers sorted by composite_z using high-performance bounding box blitting
         canvas = Image.new("RGBA", self.canvas_size, (0, 0, 0, 0))
         sorted_slots = sorted(self.slots.values(), key=lambda s: s.composite_z)
+        cw, ch = self.canvas_size
 
         for slot in sorted_slots:
             tex = slot.get_active_image()
             if tex is None:
                 continue
 
+            tw, th = tex.size
             world_t = slot.get_slot_transform()
-            affine_params = world_t.to_pillow_affine()
             
-            # Transform texture to canvas coordinate space
-            transformed_layer = tex.transform(
-                self.canvas_size,
+            # Compute transformed 4-corner bounding box in canvas coordinates
+            p0 = world_t.transform_point(Vector2D(0.0, 0.0))
+            p1 = world_t.transform_point(Vector2D(float(tw), 0.0))
+            p2 = world_t.transform_point(Vector2D(float(tw), float(th)))
+            p3 = world_t.transform_point(Vector2D(0.0, float(th)))
+
+            min_x = max(0, int(math.floor(min(p0.x, p1.x, p2.x, p3.x))))
+            min_y = max(0, int(math.floor(min(p0.y, p1.y, p2.y, p3.y))))
+            max_x = min(cw, int(math.ceil(max(p0.x, p1.x, p2.x, p3.x))))
+            max_y = min(ch, int(math.ceil(max(p0.y, p1.y, p2.y, p3.y))))
+
+            # Skip layer if outside canvas
+            if max_x <= min_x or max_y <= min_y:
+                continue
+
+            sub_w = max_x - min_x
+            sub_h = max_y - min_y
+
+            affine_params = world_t.to_pillow_affine()
+            a, b, c, d, e, f = affine_params
+
+            # Adjust translation component for local bounding-box sub-canvas
+            sub_affine = (
+                a, b, a * min_x + b * min_y + c,
+                d, e, d * min_x + e * min_y + f
+            )
+
+            sub_layer = tex.transform(
+                (sub_w, sub_h),
                 Image.AFFINE,
-                data=affine_params,
+                data=sub_affine,
                 resample=Image.BICUBIC
             )
-            
-            # Alpha composite onto canvas
-            canvas = Image.alpha_composite(canvas, transformed_layer)
+
+            canvas.alpha_composite(sub_layer, (min_x, min_y))
 
         if target_size and target_size != self.canvas_size:
             canvas = canvas.resize(target_size, Image.LANCZOS)
 
         return canvas
+

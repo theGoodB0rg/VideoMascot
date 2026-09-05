@@ -4,7 +4,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 from PIL import Image
 
 from videomascot.models.manifest import MascotManifest
@@ -48,6 +48,20 @@ class MascotEngine:
         compositor = SpriteCompositor.from_bundle_dir(bundle_dir)
         return cls(compositor=compositor)
 
+    @classmethod
+    def for_character(
+        cls,
+        character_id: str,
+        registry: Optional[Any] = None
+    ) -> MascotEngine:
+        """Instantiates a MascotEngine for a named character from a MascotRegistry."""
+        if registry is None:
+            from videomascot.core.registry import get_default_registry
+            registry = get_default_registry()
+        bundle_dir = registry.get_bundle_dir(character_id)
+        return cls.from_bundle_dir(bundle_dir)
+
+
     def render_frame(
         self,
         pose: Optional[PoseState] = None,
@@ -88,7 +102,8 @@ class MascotEngine:
             )
             
         procedural = ProceduralLifeEngine(config=act.procedural)
-        return MascotSequencer(action=act, lipsync=lipsync, procedural=procedural)
+        return MascotSequencer(action=act, lipsync=lipsync, procedural=procedural, manifest=self.manifest)
+
 
     def stream_scene(
         self,

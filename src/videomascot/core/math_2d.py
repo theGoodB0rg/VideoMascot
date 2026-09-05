@@ -130,7 +130,82 @@ class Transform2D:
         )
 
 
-# --- Easing Functions ---
+# --- Easing Functions & Cubic Bezier Curves ---
+
+class CubicBezier:
+    """Parametric Cubic Bezier easing curve (CSS / Motion Graphics standard).
+    
+    P0 = (0, 0), P3 = (1, 1)
+    Control points: P1 = (x1, y1), P2 = (x2, y2)
+    """
+    __slots__ = ("x1", "y1", "x2", "y2")
+
+    def __init__(self, x1: float, y1: float, x2: float, y2: float) -> None:
+        self.x1 = float(x1)
+        self.y1 = float(y1)
+        self.x2 = float(x2)
+        self.y2 = float(y2)
+
+    def _sample_curve_x(self, u: float) -> float:
+        # 3*(1-u)^2*u*x1 + 3*(1-u)*u^2*x2 + u^3
+        return 3.0 * (1.0 - u) * (1.0 - u) * u * self.x1 + 3.0 * (1.0 - u) * u * u * self.x2 + u * u * u
+
+    def _sample_curve_y(self, u: float) -> float:
+        return 3.0 * (1.0 - u) * (1.0 - u) * u * self.y1 + 3.0 * (1.0 - u) * u * u * self.y2 + u * u * u
+
+    def _sample_curve_derivative_x(self, u: float) -> float:
+        # Derivative of x with respect to u
+        # 3*(1-u)^2*x1 + 6*(1-u)*u*(x2 - x1) + 3*u^2*(1 - x2)
+        return (
+            3.0 * (1.0 - u) * (1.0 - u) * self.x1
+            + 6.0 * (1.0 - u) * u * (self.x2 - self.x1)
+            + 3.0 * u * u * (1.0 - self.x2)
+        )
+
+    def _solve_curve_x(self, x: float, epsilon: float = 1e-6) -> float:
+        # Newton-Raphson with fallback to bisection
+        u = x
+        for _ in range(8):
+            curr_x = self._sample_curve_x(u) - x
+            if abs(curr_x) < epsilon:
+                return u
+            d_x = self._sample_curve_derivative_x(u)
+            if abs(d_x) < 1e-6:
+                break
+            u -= curr_x / d_x
+
+        # Bisection fallback
+        low, high = 0.0, 1.0
+        u = x
+        while low < high:
+            curr_x = self._sample_curve_x(u)
+            if abs(curr_x - x) < epsilon:
+                return u
+            if x > curr_x:
+                low = u
+            else:
+                high = u
+            u = 0.5 * (high + low)
+            if abs(high - low) < epsilon:
+                break
+        return u
+
+    def evaluate(self, t: float) -> float:
+        """Evaluates easing progress y at time t in [0.0, 1.0]."""
+        if t <= 0.0:
+            return 0.0
+        if t >= 1.0:
+            return 1.0
+        u = self._solve_curve_x(t)
+        return self._sample_curve_y(u)
+
+
+# Motion Design Industry Presets
+SPRING_OVERSHOOT = CubicBezier(0.34, 1.56, 0.64, 1.0)
+ANTICIPATION = CubicBezier(0.6, -0.28, 0.735, 0.045)
+EASE_OUT_EXPO = CubicBezier(0.16, 1.0, 0.3, 1.0)
+EASE_IN_OUT_QUINT = CubicBezier(0.83, 0.0, 0.17, 1.0)
+
 
 def ease_in_out_quad(t: float) -> float:
     """Smooth ease in and out (quadratic). Input t in [0.0, 1.0]."""
@@ -160,3 +235,4 @@ def spring_lerp(start: float, end: float, t: float, damping: float = 0.5, freque
     oscillation = math.cos(frequency * t * math.pi * 2.0)
     fraction = 1.0 - (decay * oscillation)
     return start + (end - start) * fraction
+

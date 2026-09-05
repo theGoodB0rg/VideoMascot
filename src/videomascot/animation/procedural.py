@@ -5,6 +5,78 @@ from typing import Dict, List, Optional, Tuple
 
 from videomascot.models.pose import PoseState
 from videomascot.models.schema import MascotProceduralConfig
+from videomascot.models.manifest import MascotManifest
+
+
+class SpringDamper1D:
+    """1D physical damped harmonic oscillator (semi-implicit Euler solver)."""
+    __slots__ = ("stiffness", "damping", "mass", "position", "velocity")
+
+    def __init__(
+        self,
+        stiffness: float = 150.0,
+        damping: float = 12.0,
+        mass: float = 1.0,
+        initial_pos: float = 0.0
+    ) -> None:
+        self.stiffness = float(stiffness)
+        self.damping = float(damping)
+        self.mass = max(1e-4, float(mass))
+        self.position = float(initial_pos)
+        self.velocity = 0.0
+
+    def update(self, target: float, dt: float) -> float:
+        dt = max(1e-5, min(0.1, dt))
+        # Semi-implicit Euler integration:
+        # F = -k*(x - target) - c*v
+        force = -self.stiffness * (self.position - target) - self.damping * self.velocity
+        acc = force / self.mass
+        self.velocity += acc * dt
+        self.position += self.velocity * dt
+        return self.position
+
+    def reset(self, pos: float = 0.0) -> None:
+        self.position = float(pos)
+        self.velocity = 0.0
+
+
+class BoneSpringSimulator:
+    """Simulates secondary rotational inertia for bones configured with PhysicsConfig."""
+
+    def __init__(self, manifest: MascotManifest) -> None:
+        self.manifest = manifest
+        self._springs: Dict[str, SpringDamper1D] = {}
+        self._last_parent_rotations: Dict[str, float] = {}
+
+        for b_name, b_cfg in manifest.bones.items():
+            if b_cfg.physics:
+                self._springs[b_name] = SpringDamper1D(
+                    stiffness=b_cfg.physics.stiffness,
+                    damping=b_cfg.physics.damping,
+                    mass=b_cfg.physics.mass,
+                    initial_pos=b_cfg.physics.resting_offset_deg
+                )
+
+    def step(self, pose: PoseState, dt: float) -> PoseState:
+        for b_name, spring in self._springs.items():
+            b_cfg = self.manifest.bones[b_name]
+            parent_name = b_cfg.parent
+            parent_rot = pose.joint_rotations.get(parent_name, 0.0) if parent_name else 0.0
+            last_rot = self._last_parent_rotations.get(parent_name, parent_rot) if parent_name else 0.0
+            parent_vel = (parent_rot - last_rot) / max(1e-4, dt)
+
+            if parent_name:
+                self._last_parent_rotations[parent_name] = parent_rot
+
+            # Rotational inertia: child springs against parent acceleration/velocity
+            target_offset = b_cfg.physics.resting_offset_deg - 0.06 * parent_vel
+            simulated_offset = spring.update(target_offset, dt)
+
+            current_rot = pose.joint_rotations.get(b_name, 0.0)
+            pose.set_joint_rotation(b_name, current_rot + simulated_offset)
+
+        return pose
+
 
 
 class ProceduralLifeEngine:
@@ -84,17 +156,34 @@ class ProceduralLifeEngine:
         dy = 0.8 * math.cos(0.7 * t + 0.5) + 0.4 * math.sin(2.3 * t)
         return (dx, dy)
 
+    def get_hover_offsets(self, t: float) -> Tuple[float, float]:
+        """Calculates multi-harmonic levitation hover (dy, tilt_rot) in pixels and degrees."""
+        if not self.config.hover:
+            return (0.0, 0.0)
+        freq = self.config.hover_bpm / 60.0
+        phase = 2.0 * math.pi * freq * t
+        amp = self.config.hover_amplitude
+        # Multi-harmonic floating bob
+        dy = amp * (math.sin(phase) + 0.3 * math.sin(2.3 * phase + 0.8))
+        rot = 1.4 * math.sin(0.8 * phase + 0.4)
+        return (dy, rot)
+
     def apply(self, pose: PoseState, t: float, is_speaking: bool = False) -> PoseState:
         """Applies procedural life transformations to a PoseState at time t."""
-        # 1. Apply breathing
-        sx, sy, head_dy = self.get_breathing_offsets(t)
-        
-        # Multiply with existing joint scales
-        curr_sx, curr_sy = pose.joint_scales.get("torso", (1.0, 1.0))
-        pose.set_joint_scale("torso", curr_sx * sx, curr_sy * sy)
-        
-        curr_dx, curr_dy = pose.joint_translations.get("head", (0.0, 0.0))
-        pose.set_joint_translation("head", curr_dx, curr_dy + head_dy)
+        # 1. Apply hover levitation if enabled (takes precedence over breathing for robots)
+        if self.config.hover:
+            hover_dy, hover_rot = self.get_hover_offsets(t)
+            r_dx, r_dy = pose.joint_translations.get("root", (0.0, 0.0))
+            pose.set_joint_translation("root", r_dx, r_dy + hover_dy)
+            r_rot = pose.joint_rotations.get("torso", 0.0)
+            pose.set_joint_rotation("torso", r_rot + hover_rot)
+        else:
+            # Apply standard organic breathing
+            sx, sy, head_dy = self.get_breathing_offsets(t)
+            curr_sx, curr_sy = pose.joint_scales.get("torso", (1.0, 1.0))
+            pose.set_joint_scale("torso", curr_sx * sx, curr_sy * sy)
+            curr_dx, curr_dy = pose.joint_translations.get("head", (0.0, 0.0))
+            pose.set_joint_translation("head", curr_dx, curr_dy + head_dy)
         
         # 2. Speaking micro-bounce
         if is_speaking and self.config.bounce_on_speak:
@@ -110,6 +199,8 @@ class ProceduralLifeEngine:
             pose.set_attachment("eye_r_sclera", "eyelid_blink")
             pose.set_attachment("pupil_l", "")
             pose.set_attachment("pupil_r", "")
+            pose.set_attachment("eyes", "blink")
+
 
         # 4. Apply saccade pupil offset
         saccade_x, saccade_y = self.get_gaze_saccades(t)
@@ -117,3 +208,4 @@ class ProceduralLifeEngine:
         pose.pupil_offset = (base_px + saccade_x, base_py + saccade_y)
 
         return pose
+

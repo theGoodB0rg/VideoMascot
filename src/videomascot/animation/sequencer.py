@@ -4,8 +4,10 @@ from typing import Dict, List, Optional, Tuple
 
 from videomascot.models.pose import PoseState
 from videomascot.models.schema import MascotActionSchema, SpeechCue
+from videomascot.models.manifest import MascotManifest
 from videomascot.core.bones import solve_pointing_fk
-from videomascot.animation.procedural import ProceduralLifeEngine
+from videomascot.core.math_2d import CubicBezier, SPRING_OVERSHOOT, EASE_OUT_EXPO
+from videomascot.animation.procedural import ProceduralLifeEngine, BoneSpringSimulator
 from videomascot.animation.lipsync import LipSyncEngine
 
 
@@ -24,7 +26,9 @@ class MascotSequencer:
         self,
         action: Optional[MascotActionSchema] = None,
         lipsync: Optional[LipSyncEngine] = None,
-        procedural: Optional[ProceduralLifeEngine] = None
+        procedural: Optional[ProceduralLifeEngine] = None,
+        manifest: Optional[MascotManifest] = None,
+        easing_curve: Optional[CubicBezier] = None
     ) -> None:
         self.action = action or MascotActionSchema()
         self.lipsync = lipsync or LipSyncEngine(
@@ -32,6 +36,12 @@ class MascotSequencer:
             default_resting_viseme=self._get_resting_viseme_for_emotion(self.action.emotion)
         )
         self.procedural = procedural or ProceduralLifeEngine(config=self.action.procedural)
+        self.manifest = manifest
+        self.easing_curve = easing_curve or EASE_OUT_EXPO
+        self.spring_sim = BoneSpringSimulator(manifest) if manifest else None
+        self._last_t = 0.0
+
+
 
     @classmethod
     def _get_resting_viseme_for_emotion(cls, emotion: str) -> str:
@@ -49,17 +59,31 @@ class MascotSequencer:
         """Returns the canonical kinematic PoseState for a named gesture."""
         pose = PoseState(viseme=self._get_resting_viseme_for_emotion(emotion))
         
+        def set_eye_expression(expr: str) -> None:
+            if self.manifest:
+                if "eyes" in self.manifest.slots and expr in self.manifest.slots["eyes"].attachments:
+                    pose.set_attachment("eyes", expr)
+                if "eye_l_sclera" in self.manifest.slots and expr in self.manifest.slots["eye_l_sclera"].attachments:
+                    pose.set_attachment("eye_l_sclera", expr)
+                    pose.set_attachment("eye_r_sclera", expr)
+            else:
+                pose.set_attachment("eyes", expr)
+                pose.set_attachment("eye_l_sclera", expr)
+                pose.set_attachment("eye_r_sclera", expr)
+
         # 1. Base Emotion Setup
         if emotion in ("friendly", "happy"):
             pose.set_joint_rotation("head", 2.0)
+            set_eye_expression("default")
         elif emotion == "excited":
             pose.set_joint_rotation("head", 4.0)
-            pose.set_attachment("eye_l_sclera", "happy")
-            pose.set_attachment("eye_r_sclera", "happy")
+            set_eye_expression("happy")
         elif emotion == "thinking":
             pose.set_joint_rotation("head", 10.0)
+            set_eye_expression("focused")
         elif emotion == "shocked":
             pose.set_joint_rotation("head", 0.0)
+            set_eye_expression("wide")
 
         # 2. Kinematic Gesture Setup
         if gesture == "idle":
@@ -74,6 +98,7 @@ class MascotSequencer:
         elif gesture == "point_up_right":
             pose.set_joint_rotation("torso", -3.0)
             pose.set_joint_rotation("head", 6.0)
+            set_eye_expression("focused")
             sh_r, el_r = solve_pointing_fk(aim_angle_deg=40.0, is_right_arm=True, bend_ratio=0.08)
             pose.set_joint_rotation("arm_r_upper", sh_r)
             pose.set_joint_rotation("arm_r_lower", el_r)
@@ -88,6 +113,7 @@ class MascotSequencer:
         elif gesture == "point_up_left":
             pose.set_joint_rotation("torso", 3.0)
             pose.set_joint_rotation("head", -6.0)
+            set_eye_expression("focused")
             sh_l, el_l = solve_pointing_fk(aim_angle_deg=40.0, is_right_arm=False, bend_ratio=0.08)
             pose.set_joint_rotation("arm_l_upper", sh_l)
             pose.set_joint_rotation("arm_l_lower", el_l)
@@ -101,13 +127,13 @@ class MascotSequencer:
 
         elif gesture == "happy_wave":
             pose.set_joint_rotation("head", 8.0)
+            set_eye_expression("happy")
             pose.set_joint_rotation("arm_l_upper", 125.0)
             pose.set_joint_rotation("arm_l_lower", 25.0)
             pose.set_attachment("hand_l", "wave")
-            pose.set_attachment("eye_l_sclera", "happy")
-            pose.set_attachment("eye_r_sclera", "happy")
             pose.set_joint_rotation("arm_r_upper", -15.0)
             pose.set_joint_rotation("arm_r_lower", -10.0)
+
 
         elif gesture == "thumbs_up":
             pose.set_joint_rotation("head", -4.0)
@@ -172,10 +198,11 @@ class MascotSequencer:
         
         if self.action.gesture != "idle" and t < transition_duration:
             idle_pose = self.get_base_gesture_pose("idle", self.action.emotion)
-            weight = smoothstep(0.0, transition_duration, t)
+            rel_t = max(0.0, min(1.0, t / transition_duration)) if transition_duration > 0 else 1.0
+            weight = self.easing_curve.evaluate(rel_t)
             
             evaluated_pose = idle_pose.clone()
-            # Interpolate all joint rotations
+            # Interpolate all joint rotations with bezier overshoot
             for bone, target_angle in target_pose.joint_rotations.items():
                 idle_angle = idle_pose.joint_rotations.get(bone, 0.0)
                 evaluated_pose.set_joint_rotation(bone, idle_angle + weight * (target_angle - idle_angle))
@@ -191,7 +218,14 @@ class MascotSequencer:
         active_viseme, is_speaking = self.lipsync.get_viseme_at(t)
         evaluated_pose.set_viseme(active_viseme)
 
-        # 3. Apply Continuous Procedural Life (Breathing, Blinking, Saccades)
+        # 3. Apply Continuous Procedural Life (Breathing, Blinking, Saccades, Hover)
         evaluated_pose = self.procedural.apply(evaluated_pose, t=t, is_speaking=is_speaking)
 
+        # 4. Apply Secondary Spring-Damper Physics if enabled
+        if self.spring_sim:
+            dt = max(1e-4, t - self._last_t) if t > self._last_t else 1.0 / 30.0
+            self._last_t = t
+            evaluated_pose = self.spring_sim.step(evaluated_pose, dt=dt)
+
         return evaluated_pose
+
