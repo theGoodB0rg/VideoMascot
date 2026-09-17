@@ -1,0 +1,29 @@
+{
+  "name": "videomascot",
+  "version": "1.0.0",
+  "description": "A modular, scalable, test-driven, AI-ready layered puppet and mascot animation engine designed for automated video pipelines (faceless channels, explainer videos, educational content).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theGoodB0rg/VideoMascot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/theGoodB0rg/VideoMascot/issues"
+  },
+  "homepage": "https://github.com/theGoodB0rg/VideoMascot#readme",
+  "dependencies": {
+    "puppeteer-core": "^25.11.0",
+    "three": "^0.186.0"
+  }
+}

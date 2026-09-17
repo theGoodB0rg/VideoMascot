@@ -1,0 +1,485 @@
+{
+  "id": "brick_dev",
+  "name": "Brick Dev",
+  "version": "1.0.0",
+  "description": "Photorealistic 3D Lego Minifigure Senior Developer with Swap Sets and 9-viseme lip-sync.",
+  "canvas_size": [
+    1000,
+    1000
+  ],
+  "bones": {
+    "root": {
+      "parent": null,
+      "position": [
+        500.0,
+        780.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 0.0,
+      "z_index": 0,
+      "physics": null,
+      "constraints": null
+    },
+    "torso": {
+      "parent": "root",
+      "position": [
+        0.0,
+        -110.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 0.0,
+      "z_index": 10,
+      "physics": {
+        "stiffness": 150.0,
+        "damping": 15.0,
+        "mass": 1.0,
+        "resting_offset_deg": 0.0
+      },
+      "constraints": null
+    },
+    "head": {
+      "parent": "torso",
+      "position": [
+        0.0,
+        -440.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 0.0,
+      "z_index": 20,
+      "physics": {
+        "stiffness": 180.0,
+        "damping": 16.0,
+        "mass": 0.8,
+        "resting_offset_deg": 0.0
+      },
+      "constraints": {
+        "min_rotation_deg": -30.0,
+        "max_rotation_deg": 30.0
+      }
+    },
+    "arm_l_upper": {
+      "parent": "torso",
+      "position": [
+        -144.0,
+        -220.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 130.0,
+      "z_index": 14,
+      "physics": {
+        "stiffness": 160.0,
+        "damping": 14.0,
+        "mass": 0.7,
+        "resting_offset_deg": 0.0
+      },
+      "constraints": null
+    },
+    "arm_l_lower": {
+      "parent": "arm_l_upper",
+      "position": [
+        0.0,
+        130.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 130.0,
+      "z_index": 15,
+      "physics": null,
+      "constraints": null
+    },
+    "hand_l": {
+      "parent": "arm_l_lower",
+      "position": [
+        0.0,
+        130.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 0.0,
+      "z_index": 16,
+      "physics": null,
+      "constraints": null
+    },
+    "arm_r_upper": {
+      "parent": "torso",
+      "position": [
+        144.0,
+        -220.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 130.0,
+      "z_index": 17,
+      "physics": {
+        "stiffness": 160.0,
+        "damping": 14.0,
+        "mass": 0.7,
+        "resting_offset_deg": 0.0
+      },
+      "constraints": null
+    },
+    "arm_r_lower": {
+      "parent": "arm_r_upper",
+      "position": [
+        0.0,
+        130.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 130.0,
+      "z_index": 18,
+      "physics": null,
+      "constraints": null
+    },
+    "hand_r": {
+      "parent": "arm_r_lower",
+      "position": [
+        0.0,
+        130.0
+      ],
+      "rotation_deg": 0.0,
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "pivot": [
+        0.0,
+        0.0
+      ],
+      "length": 0.0,
+      "z_index": 19,
+      "physics": null,
+      "constraints": null
+    }
+  },
+  "slots": {
+    "torso": {
+      "bone": "torso",
+      "default_attachment": "default",
+      "offset": [
+        -500.0,
+        -670.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 1,
+      "attachments": {
+        "default": "body/torso.png",
+        "happy_wave": "body/torso_wave.png",
+        "point_up_right": "body/torso_point_r.png",
+        "point_up_left": "body/torso_point_l.png",
+        "thumbs_up": "body/torso_point_r.png",
+        "thinking": "body/torso.png"
+      }
+    },
+    "head_base": {
+      "bone": "head",
+      "default_attachment": "default",
+      "offset": [
+        -200.0,
+        -210.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 2,
+      "attachments": {
+        "default": "head/head_base.png",
+        "happy_wave": "head/head_wave.png",
+        "point_up_right": "head/head_point.png",
+        "point_up_left": "head/head_point.png",
+        "thumbs_up": "head/head_point.png",
+        "thinking": "head/head_base.png"
+      }
+    },
+    "hair": {
+      "bone": "head",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 6,
+      "attachments": {
+        "default": "head/hair.png"
+      }
+    },
+    "eyebrows": {
+      "bone": "head",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 3,
+      "attachments": {
+        "default": "head/eyebrows.png"
+      }
+    },
+    "eyes": {
+      "bone": "head",
+      "default_attachment": "default",
+      "offset": [
+        -110.0,
+        -30.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 4,
+      "attachments": {
+        "default": "head/eyes/default.png",
+        "happy": "head/eyes/happy.png",
+        "blink": "head/eyes/blink.png",
+        "focused": "head/eyes/focused.png",
+        "wink": "head/eyes/wink.png",
+        "wide": "head/eyes/wide.png"
+      }
+    },
+    "beard": {
+      "bone": "head",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 4,
+      "attachments": {
+        "default": "head/beard.png"
+      }
+    },
+    "mouth": {
+      "bone": "head",
+      "default_attachment": "smile",
+      "offset": [
+        -50.0,
+        95.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 5,
+      "attachments": {
+        "smile": "head/mouth/smile.png",
+        "open_smile": "head/mouth/open_smile.png",
+        "rest": "head/mouth/rest.png",
+        "A_I": "head/mouth/A_I.png",
+        "E": "head/mouth/E.png",
+        "O": "head/mouth/O.png",
+        "U": "head/mouth/U.png",
+        "M_B_P": "head/mouth/M_B_P.png",
+        "F_V": "head/mouth/F_V.png",
+        "L_D_T_N": "head/mouth/L_D_T_N.png",
+        "W_Q": "head/mouth/W_Q.png"
+      }
+    },
+    "arm_l_up": {
+      "bone": "arm_l_upper",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 1,
+      "attachments": {
+        "default": "body/arm_upper.png"
+      }
+    },
+    "arm_l_low": {
+      "bone": "arm_l_lower",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 2,
+      "attachments": {
+        "default": "body/arm_lower.png"
+      }
+    },
+    "hand_l": {
+      "bone": "hand_l",
+      "default_attachment": "rest",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 3,
+      "attachments": {
+        "rest": "body/hands/rest_l.png",
+        "point": "body/hands/point_l.png",
+        "wave": "body/hands/wave_l.png",
+        "thumbs_up": "body/hands/thumbs_up_l.png"
+      }
+    },
+    "arm_r_up": {
+      "bone": "arm_r_upper",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 1,
+      "attachments": {
+        "default": "body/arm_upper.png"
+      }
+    },
+    "arm_r_low": {
+      "bone": "arm_r_lower",
+      "default_attachment": "default",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 2,
+      "attachments": {
+        "default": "body/arm_lower.png"
+      }
+    },
+    "hand_r": {
+      "bone": "hand_r",
+      "default_attachment": "rest",
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "rotation_deg": 0.0,
+      "z_index": 3,
+      "attachments": {
+        "rest": "body/hands/rest_r.png",
+        "point": "body/hands/point_r.png",
+        "wave": "body/hands/wave_r.png",
+        "thumbs_up": "body/hands/thumbs_up_r.png"
+      }
+    }
+  },
+  "viseme_slot": "mouth",
+  "visemes": {
+    "smile": "smile",
+    "open_smile": "open_smile",
+    "rest": "rest",
+    "A_I": "A_I",
+    "E": "E",
+    "O": "O",
+    "U": "U",
+    "M_B_P": "M_B_P",
+    "F_V": "F_V",
+    "L_D_T_N": "L_D_T_N",
+    "W_Q": "W_Q"
+  },
+  "default_palette": {},
+  "palette_tokens": {}
+}

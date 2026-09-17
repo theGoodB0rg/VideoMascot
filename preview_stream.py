@@ -180,7 +180,95 @@ def generate_nexus_stream_demos():
     print("Generated demo_nexus_overlay.gif")
 
 
+def generate_brick_stream_demos():
+    preview_dir = Path("preview/brick_dev")
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    
+    engine = MascotEngine.for_character("brick_dev")
+    
+    # 1. Export Standalone Transparent Alpha WebM for Brick Dev
+    print("[1/3] Exporting Brick Dev Transparent Alpha WebM (preview/brick_dev/demo_brick_alpha.webm)...")
+    action = MascotActionSchema(
+        character="brick_dev",
+        emotion="excited",
+        gesture="happy_wave",
+        gaze="camera",
+        procedural={"breathing": True, "breathing_amplitude": 0.02, "blinking": True},
+        speech_cues=[
+            SpeechCue(start=0.3, end=0.8, viseme="A_I", word="Hello"),
+            SpeechCue(start=0.8, end=1.4, viseme="O", word="world"),
+            SpeechCue(start=1.4, end=2.2, viseme="smile", word="engineers"),
+        ]
+    )
+    
+    webm_path = preview_dir / "demo_brick_alpha.webm"
+    engine.export_alpha_video(
+        action=action,
+        duration=3.0,
+        output_path=webm_path,
+        fps=24,
+        codec="vp9",
+        target_size=(380, 380)
+    )
+    print("Exported demo_brick_alpha.webm")
+
+    # 2. Convert transparent WebM to animated GIF
+    print("[2/3] Generating Animated GIF for Transparent Brick Dev...")
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", str(webm_path),
+        "-vf", "fps=15,scale=280:-1:flags=lanczos,split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse=alpha_threshold=128",
+        str(preview_dir / "demo_brick_alpha.gif")
+    ], check=True, capture_output=True)
+    print("Generated demo_brick_alpha.gif")
+
+    # 3. Generating Background and In-Memory Streaming Overlay
+    print("[3/3] Generating Brick Dev Overlay Demo (preview/brick_dev/demo_brick_overlay.mp4)...")
+    bg_video = preview_dir / "brick_bg.mp4"
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-f", "lavfi",
+        "-i", "color=c=0x182030:s=1280x720:d=3.0:r=24",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        str(bg_video)
+    ], check=True, capture_output=True)
+
+    action_overlay = MascotActionSchema(
+        character="brick_dev",
+        emotion="friendly",
+        gesture="point_up_right",
+        gaze="point_target",
+        procedural={"breathing": True, "breathing_amplitude": 0.015, "blinking": True},
+        placement=MascotPlacementSchema(anchor="bottom_right", scale=0.55, offset=(40, 20)),
+        speech_cues=[
+            SpeechCue(start=0.2, end=0.9, viseme="A_I"),
+            SpeechCue(start=0.9, end=1.8, viseme="O"),
+            SpeechCue(start=1.8, end=2.8, viseme="smile"),
+        ]
+    )
+
+    compositor = VideoOverlayCompositor(engine=engine)
+    out_video = preview_dir / "demo_brick_overlay.mp4"
+    compositor.overlay_onto_video(
+        input_video=bg_video,
+        output_video=out_video,
+        action=action_overlay
+    )
+    print(f"Generated in-memory streaming overlay demo: {out_video}")
+
+    # Convert overlay video to animated GIF
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", str(out_video),
+        "-vf", "fps=15,scale=640:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+        str(preview_dir / "demo_brick_overlay.gif")
+    ], check=True, capture_output=True)
+    print("Generated demo_brick_overlay.gif")
+
+
 if __name__ == "__main__":
     generate_demos()
     generate_nexus_stream_demos()
+    generate_brick_stream_demos()
 

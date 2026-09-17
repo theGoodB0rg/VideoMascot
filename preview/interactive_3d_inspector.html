@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoMascot - 3D Brick Dev Interactive Inspector</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "/node_modules/three/build/three.module.js",
+            "three/addons/": "/node_modules/three/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #090d16;
+            color: #f8fafc;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #viewport-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #121218;
+            transition: background 0.3s ease;
+        }
+        #viewport-container.light {
+            background: #f1f5f9;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            outline: none;
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        #sidebar {
+            width: 390px;
+            background: #0f172a;
+            border-left: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: -10px 0 25px rgba(0, 0, 0, 0.4);
+        }
+        .header {
+            padding: 18px 20px;
+            background: #090d16;
+            border-bottom: 1px solid #1e293b;
+        }
+        .header h1 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 0.04em;
+        }
+        .header p {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .section {
+            padding: 14px 18px;
+            border-bottom: 1px solid #1e293b;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .btn {
+            background: #1e293b;
+            color: #f1f5f9;
+            border: 1px solid #334155;
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .btn:hover {
+            background: #334155;
+            border-color: #38bdf8;
+            color: #38bdf8;
+        }
+        .btn.active {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: #ffffff;
+        }
+        .btn-primary {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .btn-primary:hover {
+            background: #0369a1;
+            color: #ffffff;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .control-label span:last-child {
+            color: #38bdf8;
+            font-family: monospace;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            background: #1e293b;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+        }
+        .helper-text {
+            font-size: 10px;
+            color: #64748b;
+            line-height: 1.4;
+            margin-top: 6px;
+        }
+        .hud-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #cbd5e1;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 5;
+        }
+        .hud-overlay span strong {
+            color: #38bdf8;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            font-size: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewport-container">
+        <div class="hud-overlay">
+            <span><strong>Left Click + Drag</strong>: 360° Rotate Orbit</span>
+            <span><strong>Right Click + Drag</strong>: Pan Camera</span>
+            <span><strong>Scroll Wheel</strong>: Zoom In/Out</span>
+            <span style="margin-top: 4px; color: #34d399;">● Live WebGL 60 FPS — Procedural Vector Face & PBR Rig</span>
+        </div>
+        <canvas id="mascotCanvas"></canvas>
+    </div>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1>3D BRICK DEV INSPECTOR</h1>
+            <p>100% Coded Procedural Likeness — Interactive Animation</p>
+        </div>
+
+        <!-- 1. CAMERA PRESETS -->
+        <div class="section">
+            <div class="section-title">Camera Angle Presets</div>
+            <div class="btn-grid">
+                <button class="btn" id="btnFront">Front Elevation</button>
+                <button class="btn" id="btnPersp">3/4 Perspective</button>
+                <button class="btn" id="btnSide">Side Profile</button>
+                <button class="btn" id="btnHands">Hands Close-Up</button>
+                <button class="btn active" id="btnHead" style="grid-column: span 2;">★ Head & Face Close-Up</button>
+            </div>
+        </div>
+
+        <!-- 2. DIRECTIONAL GAZE TRACKING -->
+        <div class="section">
+            <div class="section-title">
+                <span>Directional Gaze & Eyes</span>
+                <span class="status-badge" id="gazeBadge">Yaw 0°</span>
+            </div>
+            <div class="btn-grid">
+                <button class="btn" id="btnLookLeft30">Look Left 30°</button>
+                <button class="btn active" id="btnLookCenter">Center (0°)</button>
+                <button class="btn" id="btnLookRight30">Look Right 30°</button>
+                <button class="btn" id="btnLookUpRight">Look Up-Right</button>
+            </div>
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Gaze Yaw (Left / Right)</span>
+                    <span id="valGazeYaw">0°</span>
+                </div>
+                <input type="range" id="sliderGazeYaw" min="-45" max="45" value="0">
+            </div>
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Gaze Pitch (Down / Up)</span>
+                    <span id="valGazePitch">0°</span>
+                </div>
+                <input type="range" id="sliderGazePitch" min="-30" max="30" value="0">
+            </div>
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Eyelid Blink</span>
+                    <span id="valBlink">0%</span>
+                </div>
+                <input type="range" id="sliderBlink" min="0" max="100" value="0">
+            </div>
+            <button class="btn" id="btnAutoBlink" style="width: 100%;">▶ Enable Natural Auto-Blink</button>
+            <p class="helper-text">Pupils track smoothly across arbitrary angles. Specular catchlights stay anchored to studio light for realistic cornea reflections.</p>
+        </div>
+
+        <!-- 3. EMOTIONAL EXPRESSIONS -->
+        <div class="section">
+            <div class="section-title">Emotional Expressions</div>
+            <div class="btn-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="btn active" id="btnEmNeutral">Neutral</button>
+                <button class="btn" id="btnEmHappy">Happy</button>
+                <button class="btn" id="btnEmThinking">Thinking</button>
+                <button class="btn" id="btnEmSurprised">Surprised</button>
+                <button class="btn" id="btnEmSkeptical">Skeptical</button>
+                <button class="btn" id="btnEmFocused">Focused</button>
+            </div>
+            <p class="helper-text">Parametrically morphs eyebrow slant, apex arch, and eyelid squinting (Duchenne smile) for expressive communication.</p>
+        </div>
+
+        <!-- 4. SPEECH LIP-SYNC -->
+        <div class="section">
+            <div class="section-title">
+                <span>Speech Lip-Sync (Preston Blair 9-Set)</span>
+                <span class="status-badge" id="visemeBadge">REST</span>
+            </div>
+            <div class="btn-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="btn active" id="btnVisRest">REST</button>
+                <button class="btn" id="btnVisAI">A / I</button>
+                <button class="btn" id="btnVisE">E</button>
+                <button class="btn" id="btnVisO">O</button>
+                <button class="btn" id="btnVisU">U</button>
+                <button class="btn" id="btnVisMBP">M / B / P</button>
+                <button class="btn" id="btnVisFV">F / V</button>
+                <button class="btn" id="btnVisLTH">L / TH</button>
+                <button class="btn" id="btnVisWQ">W / Q</button>
+            </div>
+            <button class="btn btn-primary" id="btnSpeakDemo" style="width: 100%; margin-top: 6px;">
+                🗣 ▶ Speak Demo Sentence
+            </button>
+            <p class="helper-text">Full Preston Blair phonetic mouth set. Continuous vector drawing eliminates photo-tearing during speech.</p>
+        </div>
+
+        <!-- 5. LIGHTING & STUDIO THEME -->
+        <div class="section">
+            <div class="section-title">Lighting & Studio Theme</div>
+            <div class="btn-grid">
+                <button class="btn active" id="btnThemeDark">Studio Dark (#121218)</button>
+                <button class="btn" id="btnThemeLight">Studio Light (#FFFFFF)</button>
+            </div>
+            <div class="btn-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="btn active" id="btnMatPbr">PBR Shaded</button>
+                <button class="btn" id="btnMatClay">Clay Shaded</button>
+                <button class="btn" id="btnMatWire">Wireframe</button>
+            </div>
+            <button class="btn" id="btnSpin" style="width: 100%; margin-top: 4px;">▶ Toggle Auto-Turntable</button>
+        </div>
+
+        <!-- 6. JOINT ARTICULATION -->
+        <div class="section">
+            <div class="section-title">
+                <span>Joint Articulation Stress</span>
+                <button class="btn" id="btnResetPose" style="padding: 2px 8px; font-size: 11px;">Reset</button>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Left Arm Flare / Abduction (Z)</span>
+                    <span id="valFlareL">18.5°</span>
+                </div>
+                <input type="range" id="sliderFlareL" min="0" max="75" step="0.5" value="18.5">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Left Arm Raise (Pitch)</span>
+                    <span id="valArmL">0°</span>
+                </div>
+                <input type="range" id="sliderArmL" min="-30" max="135" value="0">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Left Elbow Bend</span>
+                    <span id="valElbowL">18°</span>
+                </div>
+                <input type="range" id="sliderElbowL" min="0" max="90" value="18">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Right Arm Flare / Abduction (Z)</span>
+                    <span id="valFlareR">18.5°</span>
+                </div>
+                <input type="range" id="sliderFlareR" min="0" max="75" step="0.5" value="18.5">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Right Arm Raise (Pitch)</span>
+                    <span id="valArmR">0°</span>
+                </div>
+                <input type="range" id="sliderArmR" min="-30" max="135" value="0">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Right Elbow Bend</span>
+                    <span id="valElbowR">18°</span>
+                </div>
+                <input type="range" id="sliderElbowR" min="0" max="90" value="18">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Head Yaw (Turn)</span>
+                    <span id="valHeadYaw">0°</span>
+                </div>
+                <input type="range" id="sliderHeadYaw" min="-45" max="45" value="0">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Head Pitch (Tilt)</span>
+                    <span id="valHeadPitch">0°</span>
+                </div>
+                <input type="range" id="sliderHeadPitch" min="-20" max="20" value="0">
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { ProceduralFacePainter, EMOTIONS } from '/src/three_mascot/textures/ProceduralFacePainter.js';
+        import { ProceduralTorsoPainter } from '/src/three_mascot/textures/ProceduralTorsoPainter.js';
+
+        const canvas = document.getElementById('mascotCanvas');
+        const container = document.getElementById('viewport-container');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x121218);
+
+        const camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.1, 50);
+        // Default close-up framing head & upper torso
+        camera.position.set(0, 2.05, 2.6);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 2.02, 0);
+
+        // Lighting matching studio concept art
+        const ambientLight = new THREE.AmbientLight(0x40352c, 1.2);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+        keyLight.position.set(3, 5, 4);
+        keyLight.castShadow = true;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0xa5c4e8, 0.9);
+        fillLight.position.set(-3.5, 2.5, 2.5);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffeedd, 1.6);
+        rimLight.position.set(0.5, 4, -3.5);
+        scene.add(rimLight);
+
+        // 1. 100% Procedural Vector Face Painter
+        const facePainter = new ProceduralFacePainter({ width: 2048, height: 1024 });
+        const faceCanvas = facePainter.initCanvas();
+        facePainter.render();
+
+        const faceTex = new THREE.CanvasTexture(faceCanvas);
+        faceTex.colorSpace = THREE.SRGBColorSpace;
+
+        function updateFace() {
+            facePainter.render();
+            faceTex.needsUpdate = true;
+        }
+
+        // 2. 100% Procedural Torso Painter (Pure fabric, ZERO neck skin wedge)
+        const torsoPainter = new ProceduralTorsoPainter({ width: 1024, height: 1024 });
+        const torsoCanvas = torsoPainter.initCanvas();
+        torsoPainter.renderFront();
+
+        const torsoTex = new THREE.CanvasTexture(torsoCanvas);
+        torsoTex.colorSpace = THREE.SRGBColorSpace;
+
+        // Sleeve texture
+        const sleevePainter = new ProceduralTorsoPainter({ width: 512, height: 512 });
+        const sleeveCanvas = sleevePainter.initCanvas();
+        sleevePainter.renderSleeve();
+        const sleeveTex = new THREE.CanvasTexture(sleeveCanvas);
+        sleeveTex.colorSpace = THREE.SRGBColorSpace;
+        sleeveTex.wrapS = THREE.RepeatWrapping; sleeveTex.wrapT = THREE.RepeatWrapping;
+        sleeveTex.repeat.set(1, 2);
+
+        // Forearm texture
+        const forearmPainter = new ProceduralTorsoPainter({ width: 512, height: 512 });
+        const forearmCanvas = forearmPainter.initCanvas();
+        forearmPainter.renderForearm();
+        const forearmTex = new THREE.CanvasTexture(forearmCanvas);
+        forearmTex.colorSpace = THREE.SRGBColorSpace;
+
+        // PBR Materials
+        const pbrSkinMat = new THREE.MeshPhysicalMaterial({ color: 0x94532B, roughness: 0.25, clearcoat: 0.45, clearcoatRoughness: 0.15 });
+        const pbrHeadMat = new THREE.MeshPhysicalMaterial({ map: faceTex, roughness: 0.25, clearcoat: 0.45, clearcoatRoughness: 0.15 });
+        const pbrHairMat = new THREE.MeshStandardMaterial({ color: 0x1a1715, roughness: 0.82, metalness: 0.02 });
+        const pbrTorsoMat = new THREE.MeshPhysicalMaterial({ map: torsoTex, roughness: 0.28, clearcoat: 0.38, clearcoatRoughness: 0.20 });
+        const pbrTorsoSidesMat = new THREE.MeshPhysicalMaterial({ color: 0x96B8DA, roughness: 0.28, clearcoat: 0.38 });
+        const pbrUpperArmMat = new THREE.MeshPhysicalMaterial({ map: sleeveTex, roughness: 0.28, clearcoat: 0.38 });
+        const pbrForearmMat = new THREE.MeshPhysicalMaterial({ map: forearmTex, roughness: 0.26, clearcoat: 0.42 });
+        const pbrWaistMat = new THREE.MeshPhysicalMaterial({ color: 0x1c2b46, roughness: 0.30, clearcoat: 0.35 });
+
+        // Clay Materials
+        const clayMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.35, metalness: 0.04 });
+        const clayHairMat = new THREE.MeshStandardMaterial({ color: 0x546e7a, roughness: 0.65, metalness: 0.02 });
+
+        // Minifigure Assembly
+        const minifigRoot = new THREE.Group();
+        scene.add(minifigRoot);
+
+        // 1. Waist
+        const waist = new THREE.Mesh(new THREE.BoxGeometry(1.96, 0.36, 0.82), pbrWaistMat);
+        waist.position.y = 0.18;
+        minifigRoot.add(waist);
+
+        // 2. Torso
+        const shape = new THREE.Shape();
+        shape.moveTo(-0.96, -0.64);
+        shape.lineTo(0.96, -0.64);
+        shape.lineTo(0.72, 0.64);
+        shape.lineTo(-0.72, 0.64);
+        shape.closePath();
+
+        const torsoGeom = new THREE.ExtrudeGeometry(shape, {
+            steps: 1, depth: 0.74, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 4
+        });
+        torsoGeom.center();
+        const posAttr = torsoGeom.attributes.position;
+        const uvAttr = torsoGeom.attributes.uv;
+        for (let i = 0; i < posAttr.count; i++) {
+            const x = posAttr.getX(i), y = posAttr.getY(i), z = posAttr.getZ(i);
+            if (z > 0.25) {
+                const w = 0.96 - ((y + 0.64) / 1.28) * 0.24;
+                uvAttr.setXY(i, Math.max(0, Math.min(1, (x + w) / (2.0 * w))), Math.max(0, Math.min(1, (y + 0.64) / 1.28)));
+            }
+        }
+        uvAttr.needsUpdate = true;
+        const torso = new THREE.Mesh(torsoGeom, [pbrTorsoMat, pbrTorsoSidesMat]);
+        torso.position.y = 0.82;
+        minifigRoot.add(torso);
+
+        // Clean Neck Cylinder (zero brown skin on shirt)
+        const neckH = 0.06, neckR = 0.24;
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(neckR, neckR, neckH, 32), pbrSkinMat);
+        neck.position.y = 0.82 + 0.64 + neckH / 2.0;
+        minifigRoot.add(neck);
+
+        // Head Group (for rotation)
+        const headH = 1.06, headR = 0.52;
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0, 0.82 + 0.64 + neckH + headH / 2.0, 0); // 2.04
+        minifigRoot.add(headGroup);
+
+        const headPoints = [];
+        const bR = 0.08;
+        headPoints.push(new THREE.Vector2(0.24, -headH/2));
+        for (let i = 0; i <= 6; i++) {
+            const a = (Math.PI/2) * (1 - i/6);
+            headPoints.push(new THREE.Vector2(headR - bR + Math.cos(a)*bR, -headH/2 + bR - Math.sin(a)*bR));
+        }
+        headPoints.push(new THREE.Vector2(headR, headH/2 - bR));
+        for (let i = 0; i <= 6; i++) {
+            const a = (Math.PI/2) * (i/6);
+            headPoints.push(new THREE.Vector2(headR - bR + Math.cos(a)*bR, headH/2 - bR + Math.sin(a)*bR));
+        }
+        headPoints.push(new THREE.Vector2(0.24, headH/2));
+        headPoints.push(new THREE.Vector2(0, headH/2));
+
+        const headGeom = new THREE.LatheGeometry(headPoints, 64, -Math.PI, Math.PI * 2);
+        const hPos = headGeom.attributes.position;
+        const hUv = headGeom.attributes.uv;
+        for (let i = 0; i < hPos.count; i++) {
+            const px = hPos.getX(i), py = hPos.getY(i), pz = hPos.getZ(i);
+            const theta = Math.atan2(px, pz);
+            hUv.setXY(i, 0.5 + theta / (Math.PI * 2), (py + headH / 2) / headH);
+        }
+        hUv.needsUpdate = true;
+        const head = new THREE.Mesh(headGeom, pbrHeadMat);
+        headGroup.add(head);
+
+        const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.16, 32), pbrSkinMat);
+        stud.position.y = headH/2 + 0.08;
+        headGroup.add(stud);
+
+        // Calibrated Molded Lego Afro Hair Piece (Part 21778 - Snug Dome + Micro-Curls)
+        function createLegoAfroHair() {
+            const group = new THREE.Group();
+            group.name = 'afro_hair';
+
+            const nTheta = 48, nY = 24;
+            const geom = new THREE.BufferGeometry();
+            const positions = [], uvs = [], indices = [];
+
+            function getBottomY(theta) {
+                const zNorm = -Math.cos(theta);
+                const xVal = 0.545 * Math.sin(theta);
+                if (zNorm < -0.1) return -0.12;
+                if (zNorm < 0.35) {
+                    const t = (zNorm - (-0.1)) / 0.45;
+                    return -0.12 + 0.10 * t;
+                }
+                const yForehead = 0.29 - 0.40 * (xVal * xVal);
+                const t = Math.min(1.0, (zNorm - 0.35) / 0.35);
+                return -0.02 * (1.0 - t) + yForehead * t;
+            }
+
+            const yTop = 0.75, capCenterY = 0.26, capH = yTop - capCenterY;
+
+            for (let j = 0; j <= nY; j++) {
+                const vFrac = j / nY;
+                for (let i = 0; i <= nTheta; i++) {
+                    const theta = -Math.PI + (2.0 * Math.PI * i) / nTheta;
+                    const yBot = getBottomY(theta);
+                    const y = yTop - vFrac * (yTop - yBot);
+
+                    let px, py, pz;
+                    if (j === 0) {
+                        px = 0; py = yTop; pz = 0;
+                    } else {
+                        let r;
+                        if (y >= capCenterY) {
+                            const relY = (y - capCenterY) / capH;
+                            r = 0.548 * Math.sqrt(Math.max(0, 1.0 - relY * relY));
+                        } else {
+                            r = 0.548;
+                        }
+                        px = r * Math.sin(theta);
+                        pz = -r * Math.cos(theta);
+                        py = y;
+                    }
+                    positions.push(px, py, pz);
+                    uvs.push(i / nTheta, vFrac);
+                }
+            }
+
+            for (let j = 0; j < nY; j++) {
+                for (let i = 0; i < nTheta; i++) {
+                    const row1 = j * (nTheta + 1);
+                    const row2 = (j + 1) * (nTheta + 1);
+                    indices.push(row1 + i, row2 + i, row1 + i + 1);
+                    indices.push(row1 + i + 1, row2 + i, row2 + i + 1);
+                }
+            }
+
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            geom.setIndex(indices);
+            geom.computeVertexNormals();
+
+            const capMesh = new THREE.Mesh(geom, pbrHairMat);
+            capMesh.castShadow = true;
+            group.add(capMesh);
+
+            const curlGeom = new THREE.SphereGeometry(0.034, 8, 6);
+            const curlCount = 900;
+            const curls = new THREE.InstancedMesh(curlGeom, pbrHairMat, curlCount);
+            curls.castShadow = true;
+
+            const dummy = new THREE.Object3D();
+            let cIdx = 0;
+            for (let i = 0; i < 850; i++) {
+                const phi = Math.acos(1.0 - 0.95 * ((i + 0.5) / 850));
+                const theta = Math.sqrt(850 * Math.PI) * phi;
+                const yBot = getBottomY(theta);
+                const relY = Math.cos(phi);
+                const y = capCenterY + capH * relY;
+                if (y < yBot + 0.015) continue;
+                const r = 0.552 * Math.sin(phi);
+                const px = r * Math.sin(theta);
+                const pz = -r * Math.cos(theta);
+                dummy.position.set(px, y, pz);
+                dummy.scale.set(1.0, 1.0, 1.0);
+                dummy.updateMatrix();
+                curls.setMatrixAt(cIdx++, dummy.matrix);
+            }
+
+            const rimSteps = 36;
+            for (let i = 0; i <= rimSteps; i++) {
+                const t = -1.0 + (2.0 * i) / rimSteps;
+                const theta = Math.PI * (1.0 - 0.42 * t);
+                const yBot = getBottomY(theta);
+                const r = 0.554;
+                const px = r * Math.sin(theta);
+                const pz = -r * Math.cos(theta);
+                if (cIdx < curlCount) {
+                    dummy.position.set(px, yBot - 0.008, pz);
+                    dummy.scale.set(1.12, 1.12, 1.12);
+                    dummy.updateMatrix();
+                    curls.setMatrixAt(cIdx++, dummy.matrix);
+                }
+            }
+            curls.count = cIdx;
+            curls.instanceMatrix.needsUpdate = true;
+            group.add(curls);
+
+            return { group, capMesh, curls };
+        }
+
+        const hairData = createLegoAfroHair();
+        headGroup.add(hairData.group);
+        const hairMeshes = [hairData.capMesh, hairData.curls];
+
+        // Arms & Joints Rig
+        function createRiggedArm(isLeft) {
+            const sign = isLeft ? -1 : 1;
+            const armRoot = new THREE.Group();
+            armRoot.position.set(sign * 0.98, 1.30, 0);
+            armRoot.rotation.z = sign * THREE.MathUtils.degToRad(18.5);
+            armRoot.rotation.x = THREE.MathUtils.degToRad(-8);
+
+            const shoulderPivot = new THREE.Group();
+            armRoot.add(shoulderPivot);
+
+            const shoulderSphere = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 16), pbrUpperArmMat);
+            shoulderPivot.add(shoulderSphere);
+
+            const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.21, 0.46, 24), pbrUpperArmMat);
+            upper.position.set(0, -0.23, 0);
+            shoulderPivot.add(upper);
+
+            const elbowPivot = new THREE.Group();
+            elbowPivot.position.set(0, -0.46, 0);
+            elbowPivot.rotation.x = THREE.MathUtils.degToRad(-16);
+            shoulderPivot.add(elbowPivot);
+
+            const elbowSphere = new THREE.Mesh(new THREE.SphereGeometry(0.21, 20, 14), pbrForearmMat);
+            elbowPivot.add(elbowSphere);
+
+            const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.18, 0.38, 24), pbrForearmMat);
+            fore.position.set(0, -0.19, 0);
+            elbowPivot.add(fore);
+
+            const wristPin = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.08, 16), pbrSkinMat);
+            wristPin.position.set(0, -0.40, 0);
+            elbowPivot.add(wristPin);
+
+            const wristPivot = new THREE.Group();
+            wristPivot.position.set(0, -0.42, 0);
+            elbowPivot.add(wristPivot);
+
+            // C-Hand: spine connects at wrist, opening faces inward
+            const cShape = new THREE.Shape();
+            const cx = 0.07, cy = -0.14;
+            const rOut = 0.17, rIn = 0.10;
+            cShape.absarc(cx, cy, rOut, Math.PI * 0.25, Math.PI * 1.75, false);
+            cShape.absarc(cx, cy, rIn, Math.PI * 1.75, Math.PI * 0.25, true);
+            cShape.closePath();
+
+            const handGeom = new THREE.ExtrudeGeometry(cShape, {
+                steps: 1, depth: 0.11, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 3
+            });
+            handGeom.center();
+            const hand = new THREE.Mesh(handGeom, pbrSkinMat);
+            hand.position.set(0.07, -0.14, 0);
+            hand.rotation.set(0, isLeft ? 0 : Math.PI, 0);
+            wristPivot.add(hand);
+
+            minifigRoot.add(armRoot);
+
+            return {
+                armRoot, shoulderPivot, elbowPivot, wristPivot,
+                meshes: { shoulder: shoulderSphere, upper, elbow: elbowSphere, fore, wrist: wristPin, hand }
+            };
+        }
+
+        const rigArmL = createRiggedArm(true);
+        const rigArmR = createRiggedArm(false);
+
+        // UI Binding: Gaze Sliders & Buttons
+        const sliderGazeYaw = document.getElementById('sliderGazeYaw');
+        const sliderGazePitch = document.getElementById('sliderGazePitch');
+        const sliderBlink = document.getElementById('sliderBlink');
+        const valGazeYaw = document.getElementById('valGazeYaw');
+        const valGazePitch = document.getElementById('valGazePitch');
+        const valBlink = document.getElementById('valBlink');
+        const gazeBadge = document.getElementById('gazeBadge');
+
+        function updateGaze() {
+            const yaw = parseFloat(sliderGazeYaw.value);
+            const pitch = parseFloat(sliderGazePitch.value);
+            const blinkVal = parseFloat(sliderBlink.value) / 100.0;
+
+            facePainter.setGazeAngle(yaw, pitch);
+            facePainter.setState({ blink: blinkVal });
+            updateFace();
+
+            valGazeYaw.innerText = `${yaw}°`;
+            valGazePitch.innerText = `${pitch}°`;
+            valBlink.innerText = `${sliderBlink.value}%`;
+            gazeBadge.innerText = `Yaw ${yaw > 0 ? '+' : ''}${yaw}°`;
+        }
+
+        sliderGazeYaw.addEventListener('input', updateGaze);
+        sliderGazePitch.addEventListener('input', updateGaze);
+        sliderBlink.addEventListener('input', updateGaze);
+
+        function setGazeAngles(yaw, pitch) {
+            sliderGazeYaw.value = yaw;
+            sliderGazePitch.value = pitch;
+            updateGaze();
+        }
+
+        document.getElementById('btnLookLeft30').addEventListener('click', () => {
+            setGazeAngles(-30, 0);
+            setActiveGazeBtn('btnLookLeft30');
+        });
+        document.getElementById('btnLookCenter').addEventListener('click', () => {
+            setGazeAngles(0, 0);
+            setActiveGazeBtn('btnLookCenter');
+        });
+        document.getElementById('btnLookRight30').addEventListener('click', () => {
+            setGazeAngles(30, 0);
+            setActiveGazeBtn('btnLookRight30');
+        });
+        document.getElementById('btnLookUpRight').addEventListener('click', () => {
+            setGazeAngles(25, 18);
+            setActiveGazeBtn('btnLookUpRight');
+        });
+
+        function setActiveGazeBtn(id) {
+            ['btnLookLeft30', 'btnLookCenter', 'btnLookRight30', 'btnLookUpRight'].forEach(b => {
+                document.getElementById(b).classList.toggle('active', b === id);
+            });
+        }
+
+        // Auto Blink Engine
+        let autoBlinkActive = false;
+        let autoBlinkTimer = null;
+        const btnAutoBlink = document.getElementById('btnAutoBlink');
+
+        function triggerBlink() {
+            if (!autoBlinkActive) return;
+            const start = performance.now();
+            const duration = 140; // 140ms natural blink
+
+            function step(now) {
+                const elapsed = now - start;
+                const t = elapsed / duration;
+                if (t < 1.0) {
+                    const b = Math.sin(t * Math.PI);
+                    facePainter.setState({ blink: b });
+                    sliderBlink.value = Math.round(b * 100);
+                    valBlink.innerText = `${sliderBlink.value}%`;
+                    updateFace();
+                    requestAnimationFrame(step);
+                } else {
+                    facePainter.setState({ blink: 0.0 });
+                    sliderBlink.value = 0;
+                    valBlink.innerText = '0%';
+                    updateFace();
+                    // Schedule next random blink (Poisson 2.5s - 5.5s)
+                    const nextInterval = 2500 + Math.random() * 3000;
+                    autoBlinkTimer = setTimeout(triggerBlink, nextInterval);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        btnAutoBlink.addEventListener('click', () => {
+            autoBlinkActive = !autoBlinkActive;
+            btnAutoBlink.innerText = autoBlinkActive ? '⏸ Pause Auto-Blink' : '▶ Enable Natural Auto-Blink';
+            btnAutoBlink.classList.toggle('active', autoBlinkActive);
+            if (autoBlinkActive) {
+                autoBlinkTimer = setTimeout(triggerBlink, 1500);
+            } else {
+                clearTimeout(autoBlinkTimer);
+                facePainter.setState({ blink: 0 });
+                updateFace();
+            }
+        });
+
+        // UI Binding: Emotion Buttons
+        const emotionsList = ['NEUTRAL', 'HAPPY', 'THINKING', 'SURPRISED', 'SKEPTICAL', 'FOCUSED'];
+        emotionsList.forEach(em => {
+            const btn = document.getElementById(`btnEm${em.charAt(0) + em.slice(1).toLowerCase()}`);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    facePainter.setEmotion(em, 1.0);
+                    updateFace();
+                    emotionsList.forEach(other => {
+                        const otherBtn = document.getElementById(`btnEm${other.charAt(0) + other.slice(1).toLowerCase()}`);
+                        if (otherBtn) otherBtn.classList.toggle('active', other === em);
+                    });
+                });
+            }
+        });
+
+        // UI Binding: Viseme Buttons
+        const visemeBadge = document.getElementById('visemeBadge');
+        const visemesMap = {
+            btnVisRest: 'REST',
+            btnVisAI: 'A_I',
+            btnVisE: 'E',
+            btnVisO: 'O',
+            btnVisU: 'U',
+            btnVisMBP: 'M_B_P',
+            btnVisFV: 'F_V',
+            btnVisLTH: 'L_TH',
+            btnVisWQ: 'W_Q'
+        };
+
+        Object.entries(visemesMap).forEach(([btnId, visId]) => {
+            const b = document.getElementById(btnId);
+            if (b) {
+                b.addEventListener('click', () => {
+                    facePainter.setState({ viseme: visId });
+                    updateFace();
+                    visemeBadge.innerText = visId;
+                    Object.keys(visemesMap).forEach(k => {
+                        document.getElementById(k)?.classList.toggle('active', k === btnId);
+                    });
+                });
+            }
+        });
+
+        // Demo Speech Lip-Sync Sequencer
+        const btnSpeakDemo = document.getElementById('btnSpeakDemo');
+        let isSpeaking = false;
+
+        btnSpeakDemo.addEventListener('click', () => {
+            if (isSpeaking) return;
+            isSpeaking = true;
+            btnSpeakDemo.innerText = '🗣 Speaking...';
+
+            // Sentence: "Hello world! Brick Dev is ready to code."
+            const phonemeTimeline = [
+                { v: 'REST', d: 100 },
+                { v: 'A_I', d: 140 }, // H
+                { v: 'E', d: 160 },   // E
+                { v: 'L_TH', d: 140 },// L
+                { v: 'O', d: 220 },   // O
+                { v: 'REST', d: 100 },
+                { v: 'W_Q', d: 140 }, // W
+                { v: 'E', d: 140 },   // ER
+                { v: 'L_TH', d: 120 },// L
+                { v: 'REST', d: 160 },
+                { v: 'M_B_P', d: 120 },// B
+                { v: 'E', d: 140 },   // R
+                { v: 'A_I', d: 150 }, // I
+                { v: 'E', d: 160 },   // CK
+                { v: 'REST', d: 100 },
+                { v: 'L_TH', d: 140 },// D
+                { v: 'E', d: 180 },   // EV
+                { v: 'F_V', d: 160 }, // V
+                { v: 'REST', d: 120 },
+                { v: 'E', d: 140 },   // IS
+                { v: 'E', d: 140 },   // REA
+                { v: 'L_TH', d: 140 },// DY
+                { v: 'L_TH', d: 120 },// TO
+                { v: 'U', d: 180 },   // O
+                { v: 'O', d: 160 },   // CO
+                { v: 'REST', d: 250 } // DE
+            ];
+
+            let curIdx = 0;
+            function nextPhoneme() {
+                if (curIdx >= phonemeTimeline.length) {
+                    isSpeaking = false;
+                    btnSpeakDemo.innerText = '🗣 ▶ Speak Demo Sentence';
+                    facePainter.setState({ viseme: 'REST' });
+                    updateFace();
+                    visemeBadge.innerText = 'REST';
+                    return;
+                }
+                const p = phonemeTimeline[curIdx++];
+                facePainter.setState({ viseme: p.v });
+                updateFace();
+                visemeBadge.innerText = p.v;
+                setTimeout(nextPhoneme, p.d);
+            }
+            nextPhoneme();
+        });
+
+        // Joint Articulation Sliders
+        const sliderFlareL = document.getElementById('sliderFlareL');
+        const sliderArmL = document.getElementById('sliderArmL');
+        const sliderElbowL = document.getElementById('sliderElbowL');
+        const sliderFlareR = document.getElementById('sliderFlareR');
+        const sliderArmR = document.getElementById('sliderArmR');
+        const sliderElbowR = document.getElementById('sliderElbowR');
+        const sliderHeadYaw = document.getElementById('sliderHeadYaw');
+        const sliderHeadPitch = document.getElementById('sliderHeadPitch');
+
+        function updatePose() {
+            const flareLAngle = parseFloat(sliderFlareL.value);
+            rigArmL.armRoot.rotation.z = THREE.MathUtils.degToRad(-flareLAngle);
+            document.getElementById('valFlareL').innerText = `${flareLAngle}°`;
+
+            const armLAngle = parseFloat(sliderArmL.value);
+            rigArmL.shoulderPivot.rotation.x = THREE.MathUtils.degToRad(-armLAngle);
+            document.getElementById('valArmL').innerText = `${armLAngle}°`;
+
+            const elbowLAngle = parseFloat(sliderElbowL.value);
+            rigArmL.elbowPivot.rotation.x = THREE.MathUtils.degToRad(-elbowLAngle);
+            document.getElementById('valElbowL').innerText = `${elbowLAngle}°`;
+
+            const flareRAngle = parseFloat(sliderFlareR.value);
+            rigArmR.armRoot.rotation.z = THREE.MathUtils.degToRad(flareRAngle);
+            document.getElementById('valFlareR').innerText = `${flareRAngle}°`;
+
+            const armRAngle = parseFloat(sliderArmR.value);
+            rigArmR.shoulderPivot.rotation.x = THREE.MathUtils.degToRad(-armRAngle);
+            document.getElementById('valArmR').innerText = `${armRAngle}°`;
+
+            const elbowRAngle = parseFloat(sliderElbowR.value);
+            rigArmR.elbowPivot.rotation.x = THREE.MathUtils.degToRad(-elbowRAngle);
+            document.getElementById('valElbowR').innerText = `${elbowRAngle}°`;
+
+            const yaw = parseFloat(sliderHeadYaw.value);
+            const pitch = parseFloat(sliderHeadPitch.value);
+            headGroup.rotation.y = THREE.MathUtils.degToRad(yaw);
+            headGroup.rotation.x = THREE.MathUtils.degToRad(pitch);
+            document.getElementById('valHeadYaw').innerText = `${yaw}°`;
+            document.getElementById('valHeadPitch').innerText = `${pitch}°`;
+        }
+
+        [sliderFlareL, sliderArmL, sliderElbowL, sliderFlareR, sliderArmR, sliderElbowR, sliderHeadYaw, sliderHeadPitch].forEach(s => {
+            s.addEventListener('input', updatePose);
+        });
+
+        document.getElementById('btnResetPose').addEventListener('click', () => {
+            sliderFlareL.value = 18.5;
+            sliderArmL.value = 0;
+            sliderElbowL.value = 18;
+            sliderFlareR.value = 18.5;
+            sliderArmR.value = 0;
+            sliderElbowR.value = 18;
+            sliderHeadYaw.value = 0;
+            sliderHeadPitch.value = 0;
+            updatePose();
+        });
+
+        // Camera Presets
+        function setCamera(px, py, pz, tx, ty, tz) {
+            controls.target.set(tx, ty, tz);
+            camera.position.set(px, py, pz);
+            controls.update();
+        }
+
+        document.getElementById('btnFront').addEventListener('click', () => {
+            setCamera(0, 1.40, 5.8, 0, 1.35, 0);
+            setActiveBtn('btnFront');
+        });
+        document.getElementById('btnPersp').addEventListener('click', () => {
+            setCamera(3.8, 1.65, 4.8, 0, 1.35, 0);
+            setActiveBtn('btnPersp');
+        });
+        document.getElementById('btnSide').addEventListener('click', () => {
+            setCamera(5.2, 1.40, 0, 0, 1.35, 0);
+            setActiveBtn('btnSide');
+        });
+        document.getElementById('btnHands').addEventListener('click', () => {
+            setCamera(0, 0.40, 2.4, 0, 0.38, 0);
+            setActiveBtn('btnHands');
+        });
+        document.getElementById('btnHead').addEventListener('click', () => {
+            setCamera(0, 2.05, 2.6, 0, 2.02, 0);
+            setActiveBtn('btnHead');
+        });
+
+        function setActiveBtn(id) {
+            ['btnFront', 'btnPersp', 'btnSide', 'btnHands', 'btnHead'].forEach(b => {
+                document.getElementById(b).classList.toggle('active', b === id);
+            });
+        }
+
+        // Theme Toggle
+        document.getElementById('btnThemeDark').addEventListener('click', () => {
+            scene.background.setHex(0x121218);
+            ambientLight.color.setHex(0x40352c);
+            container.classList.remove('light');
+            document.getElementById('btnThemeDark').classList.add('active');
+            document.getElementById('btnThemeLight').classList.remove('active');
+        });
+        document.getElementById('btnThemeLight').addEventListener('click', () => {
+            scene.background.setHex(0xffffff);
+            ambientLight.color.setHex(0xe2e8f0);
+            container.classList.add('light');
+            document.getElementById('btnThemeLight').classList.add('active');
+            document.getElementById('btnThemeDark').classList.remove('active');
+        });
+
+        // Material Mode
+        let currentMode = 'pbr';
+        let autoSpin = false;
+        function setMaterialMode(mode) {
+            currentMode = mode;
+            const isPbr = mode === 'pbr';
+            const isClay = mode === 'clay';
+            const isWire = mode === 'wire';
+
+            if (isPbr || isWire) {
+                waist.material = pbrWaistMat;
+                torso.material = [pbrTorsoMat, pbrTorsoSidesMat];
+                neck.material = pbrSkinMat;
+                head.material = pbrHeadMat;
+                stud.material = pbrSkinMat;
+                hairMeshes.forEach(m => m.material = pbrHairMat);
+
+                [rigArmL, rigArmR].forEach(arm => {
+                    arm.meshes.shoulder.material = pbrUpperArmMat;
+                    arm.meshes.upper.material = pbrUpperArmMat;
+                    arm.meshes.elbow.material = pbrForearmMat;
+                    arm.meshes.fore.material = pbrForearmMat;
+                    arm.meshes.wrist.material = pbrSkinMat;
+                    arm.meshes.hand.material = pbrSkinMat;
+                });
+            } else if (isClay) {
+                waist.material = clayMat;
+                torso.material = clayMat;
+                neck.material = clayMat;
+                head.material = clayMat;
+                stud.material = clayMat;
+                hairMeshes.forEach(m => m.material = clayHairMat);
+
+                [rigArmL, rigArmR].forEach(arm => {
+                    arm.meshes.shoulder.material = clayMat;
+                    arm.meshes.upper.material = clayMat;
+                    arm.meshes.elbow.material = clayMat;
+                    arm.meshes.fore.material = clayMat;
+                    arm.meshes.wrist.material = clayMat;
+                    arm.meshes.hand.material = clayMat;
+                });
+            }
+
+            const allMats = [
+                clayMat, clayHairMat, pbrSkinMat, pbrHeadMat, pbrHairMat,
+                pbrTorsoMat, pbrTorsoSidesMat, pbrUpperArmMat, pbrForearmMat, pbrWaistMat
+            ];
+            allMats.forEach(m => { m.wireframe = isWire; });
+
+            document.getElementById('btnMatPbr').classList.toggle('active', isPbr);
+            document.getElementById('btnMatClay').classList.toggle('active', isClay);
+            document.getElementById('btnMatWire').classList.toggle('active', isWire);
+        }
+
+        document.getElementById('btnMatPbr').addEventListener('click', () => setMaterialMode('pbr'));
+        document.getElementById('btnMatClay').addEventListener('click', () => setMaterialMode('clay'));
+        document.getElementById('btnMatWire').addEventListener('click', () => setMaterialMode('wire'));
+
+        // Turntable spin
+        const btnSpin = document.getElementById('btnSpin');
+        btnSpin.addEventListener('click', () => {
+            autoSpin = !autoSpin;
+            btnSpin.innerText = autoSpin ? '⏸ Pause Auto-Turntable' : '▶ Toggle Auto-Turntable';
+            btnSpin.classList.toggle('active', autoSpin);
+        });
+
+        // Responsive Resize
+        window.addEventListener('resize', () => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            if (autoSpin) {
+                minifigRoot.rotation.y += 0.01;
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

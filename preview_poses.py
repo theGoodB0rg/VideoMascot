@@ -232,7 +232,110 @@ def generate_nexus_bot_poses():
     print("Saved nexus_bot/visemes_grid_9set.png")
 
 
+def generate_brick_dev_poses():
+    from videomascot.assets.starter_brick_dev import create_starter_brick_dev
+    from videomascot.engine import MascotEngine
+    from videomascot.inspector_builder import generate_html_inspector
+
+    preview_dir = Path("preview/brick_dev")
+    preview_dir.mkdir(parents=True, exist_ok=True)
+
+    bundle_dir = create_starter_brick_dev(Path("assets/mascots"))
+    engine = MascotEngine.for_character("brick_dev")
+    compositor = engine.compositor
+
+    # 1. Neutral Rest Pose
+    pose_rest = PoseState(viseme="smile")
+    pose_rest.set_attachment("torso", "default")
+    pose_rest.set_attachment("head_base", "default")
+    pose_rest.set_attachment("eyes", "default")
+    img_rest = compositor.render_frame(pose_rest)
+    img_rest.save(preview_dir / "pose_neutral_rest.png")
+    dark_rest = Image.new("RGB", img_rest.size, (15, 23, 42))
+    dark_rest.paste(img_rest, (0, 0), img_rest)
+    dark_rest.save(preview_dir / "pose_neutral_on_dark.png")
+    print("Saved brick_dev/pose_neutral_rest.png and pose_neutral_on_dark.png")
+
+    # 2. Point Up-Right at Chart
+    pose_point_r = PoseState(viseme="smile")
+    pose_point_r.set_attachment("torso", "point_up_right")
+    pose_point_r.set_attachment("head_base", "point_up_right")
+    pose_point_r.set_attachment("eyes", "default")
+    img_point_r = compositor.render_frame(pose_point_r)
+    img_point_r.save(preview_dir / "pose_point_up_right.png")
+    dark_point = Image.new("RGB", img_point_r.size, (15, 23, 42))
+    dark_point.paste(img_point_r, (0, 0), img_point_r)
+    dark_point.save(preview_dir / "pose_point_up_right_on_dark.png")
+    print("Saved brick_dev/pose_point_up_right.png and pose_point_up_right_on_dark.png")
+
+    # 3. Point Up-Left
+    pose_point_l = PoseState(viseme="smile")
+    pose_point_l.set_attachment("torso", "point_up_left")
+    pose_point_l.set_attachment("head_base", "point_up_left")
+    pose_point_l.set_attachment("eyes", "default")
+    img_point_l = compositor.render_frame(pose_point_l)
+    img_point_l.save(preview_dir / "pose_point_up_left.png")
+    print("Saved brick_dev/pose_point_up_left.png")
+
+    # 4. Cheerful High Wave
+    pose_wave = PoseState(viseme="smile")
+    pose_wave.set_attachment("torso", "happy_wave")
+    pose_wave.set_attachment("head_base", "happy_wave")
+    pose_wave.set_attachment("eyes", "default")
+    img_wave = compositor.render_frame(pose_wave)
+    img_wave.save(preview_dir / "pose_happy_wave.png")
+    dark_wave = Image.new("RGB", img_wave.size, (15, 23, 42))
+    dark_wave.paste(img_wave, (0, 0), img_wave)
+    dark_wave.save(preview_dir / "pose_happy_wave_on_dark.png")
+    print("Saved brick_dev/pose_happy_wave.png and pose_happy_wave_on_dark.png")
+
+    # 5. Thumbs Up Pose
+    pose_thumb = PoseState(viseme="smile")
+    pose_thumb.set_attachment("torso", "thumbs_up")
+    pose_thumb.set_attachment("head_base", "thumbs_up")
+    pose_thumb.set_attachment("eyes", "default")
+    img_thumb = compositor.render_frame(pose_thumb)
+    img_thumb.save(preview_dir / "pose_thumbs_up.png")
+    print("Saved brick_dev/pose_thumbs_up.png")
+
+    # 6. Thinking Pose
+    pose_think = PoseState(viseme="smile")
+    pose_think.set_attachment("torso", "thinking")
+    pose_think.set_attachment("head_base", "thinking")
+    pose_think.set_attachment("eyes", "default")
+    img_think = compositor.render_frame(pose_think)
+    img_think.save(preview_dir / "pose_thinking.png")
+    print("Saved brick_dev/pose_thinking.png")
+    img_think.save(preview_dir / "pose_thinking.png")
+    print("Saved brick_dev/pose_thinking.png")
+
+    # 7. Visemes 9-Set Contact Sheet
+    visemes = ["smile", "A_I", "E", "O", "U", "M_B_P", "F_V", "L_D_T_N", "W_Q"]
+    grid_w, grid_h = 3, 3
+    tile_w, tile_h = 320, 320
+    grid_img = Image.new("RGBA", (grid_w * tile_w, grid_h * tile_h), (15, 23, 42, 255))
+    draw = ImageDraw.Draw(grid_img)
+
+    for idx, v_name in enumerate(visemes):
+        gx = (idx % grid_w) * tile_w
+        gy = (idx // grid_w) * tile_h
+        p = PoseState(viseme=v_name)
+        f = compositor.render_frame(p, target_size=(tile_w, tile_h))
+        grid_img.alpha_composite(f, (gx, gy))
+        draw.rectangle([gx + 12, gy + 12, gx + 120, gy + 38], fill=(30, 41, 59, 220))
+        draw.text((gx + 22, gy + 17), f"/{v_name}/", fill=(255, 255, 255, 255))
+
+    grid_img.save(preview_dir / "visemes_grid_9set.png")
+    print("Saved brick_dev/visemes_grid_9set.png")
+
+    # 8. Interactive HTML5 Live Rig Inspector
+    inspector_file = preview_dir / "inspector.html"
+    generate_html_inspector(bundle_dir, inspector_file)
+    print(f"Generated brick_dev inspector at {inspector_file}")
+
+
 if __name__ == "__main__":
     generate_senior_animator_poses()
     generate_nexus_bot_poses()
+    generate_brick_dev_poses()
 

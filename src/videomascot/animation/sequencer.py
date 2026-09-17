@@ -85,7 +85,19 @@ class MascotSequencer:
             pose.set_joint_rotation("head", 0.0)
             set_eye_expression("wide")
 
-        # 2. Kinematic Gesture Setup
+        # 2. Kinematic Gesture Setup & Pose Library Swap Sets
+        if self.manifest and "torso" in self.manifest.slots:
+            if gesture in self.manifest.slots["torso"].attachments:
+                pose.set_attachment("torso", gesture)
+            elif gesture == "idle" and "default" in self.manifest.slots["torso"].attachments:
+                pose.set_attachment("torso", "default")
+
+        if self.manifest and "head_base" in self.manifest.slots:
+            if gesture in self.manifest.slots["head_base"].attachments:
+                pose.set_attachment("head_base", gesture)
+            elif gesture == "idle" and "default" in self.manifest.slots["head_base"].attachments:
+                pose.set_attachment("head_base", "default")
+
         if gesture == "idle":
             # Natural resting stance
             pose.set_joint_rotation("arm_r_upper", -10.0)

@@ -32,6 +32,25 @@ A modular, scalable, test-driven, AI-ready layered puppet and mascot animation e
 
 ---
 
+### 4. Character Asset: "Brick Dev" (Lego-Style Senior Software Engineer)
+*Modular brick-minifigure software developer with textured curly hair, trimmed mustache/goatee, sky-blue striped polo, and classic C-hands.*
+
+| Brick Dev In-Memory Streaming Overlay | Standalone Transparent Alpha Stream (Wave & Speech) |
+| :---: | :---: |
+| ![Brick Dev Overlay Demo](preview/brick_dev/demo_brick_overlay.gif) | ![Transparent Brick Dev](preview/brick_dev/demo_brick_alpha.gif) |
+| [Download Full MP4 (`preview/brick_dev/demo_brick_overlay.mp4`)](preview/brick_dev/demo_brick_overlay.mp4) | [Download Transparent WebM (`preview/brick_dev/demo_brick_alpha.webm`)](preview/brick_dev/demo_brick_alpha.webm) |
+
+#### Brick Dev 9-Viseme Acoustic Speech Set & Kinematics Gallery
+![Brick Dev 9-Viseme Set](preview/brick_dev/visemes_grid_9set.png)
+
+| Neutral Rest | Cheerful High Wave | Point Up-Right | Confident Thumbs Up | Thinking Pose |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="preview/brick_dev/pose_neutral_rest.png" width="180"/> | <img src="preview/brick_dev/pose_happy_wave.png" width="180"/> | <img src="preview/brick_dev/pose_point_up_right.png" width="180"/> | <img src="preview/brick_dev/pose_thumbs_up.png" width="180"/> | <img src="preview/brick_dev/pose_thinking.png" width="180"/> |
+
+*Interactive Live Web Inspector: [`preview/brick_dev/inspector.html`](preview/brick_dev/inspector.html)*
+
+---
+
 ## 🌟 Key Features
 
 - **Decoupled Multi-Mascot Registry (`MascotRegistry`)**: Dynamically discovers and loads self-contained character bundles from `assets/mascots/`. The system is 100% aesthetic-agnostic.
