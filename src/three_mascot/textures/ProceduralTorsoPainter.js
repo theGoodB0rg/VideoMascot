@@ -118,25 +118,29 @@ export class ProceduralTorsoPainter {
      * Pure fabric facing that mates with the 3D neck cylinder.
      * ZERO skin tone.
      */
+    /**
+     * Authentic V-neck opening revealing warm caramel neck skin.
+     */
     drawNeckCavity(ctx, w, h) {
         const cx = w / 2; // 512
-        const neckW = 110;
+        const neckW = 84;
 
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(cx - neckW, 0);
-        ctx.quadraticCurveTo(cx - neckW * 0.7, 85, cx, 105);
-        ctx.quadraticCurveTo(cx + neckW * 0.7, 85, cx + neckW, 0);
+        ctx.quadraticCurveTo(cx - 48, 72, cx, 116);
+        ctx.quadraticCurveTo(cx + 48, 72, cx + neckW, 0);
         ctx.closePath();
 
-        ctx.fillStyle = this.colors.collarInside;
+        // Warm caramel skin tone matching the elevated 3D neck pedestal
+        ctx.fillStyle = this.colors.skinBase || '#9A572E';
         ctx.fill();
 
-        // Inner shadow
-        const shadow = ctx.createLinearGradient(0, 0, 0, 105);
-        shadow.addColorStop(0, 'rgba(25, 40, 60, 0.55)');
-        shadow.addColorStop(0.6, 'rgba(25, 40, 60, 0.20)');
-        shadow.addColorStop(1, 'rgba(25, 40, 60, 0.0)');
+        // Soft ambient neck shadow under the 3D neck cylinder
+        const shadow = ctx.createLinearGradient(0, 0, 0, 80);
+        shadow.addColorStop(0, 'rgba(70, 35, 18, 0.45)');
+        shadow.addColorStop(0.6, 'rgba(70, 35, 18, 0.15)');
+        shadow.addColorStop(1, 'rgba(70, 35, 18, 0.0)');
         ctx.fillStyle = shadow;
         ctx.fill();
 
@@ -148,26 +152,26 @@ export class ProceduralTorsoPainter {
      */
     drawPlacket(ctx, w, h) {
         const cx = w / 2; // 512
-        const pw = 68;
-        const pTop = 102;
-        const pBottom = 265;
+        const pw = 54;
+        const pTop = 116;
+        const pBottom = 236;
         const xLeft = cx - pw / 2;
 
         ctx.save();
 
-        // Placket background (matches light blue polo fabric)
+        // Placket background (matches sky-blue polo fabric)
         ctx.fillStyle = this.colors.stripeBlue;
         ctx.beginPath();
-        ctx.roundRect(xLeft, pTop, pw, pBottom - pTop, [0, 0, 5, 5]);
+        ctx.roundRect(xLeft, pTop, pw, pBottom - pTop, [0, 0, 6, 6]);
         ctx.fill();
 
         // Placket side seams & bottom outline
         ctx.strokeStyle = this.colors.placketOutline;
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 4.8;
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(xLeft, pTop);
-        ctx.lineTo(xLeft, pBottom - 5);
+        ctx.lineTo(xLeft, pBottom - 6);
         ctx.arcTo(xLeft, pBottom, xLeft + 6, pBottom, 6);
         ctx.lineTo(xLeft + pw - 6, pBottom);
         ctx.arcTo(xLeft + pw, pBottom, xLeft + pw, pBottom - 6, 6);
@@ -178,7 +182,7 @@ export class ProceduralTorsoPainter {
     }
 
     /**
-     * Authentic folded polo collar lapels matching reference.
+     * Authentic folded polo collar lapels matching reference Image 2.
      */
     drawCollar(ctx, w, h) {
         const cx = w / 2; // 512
@@ -191,94 +195,95 @@ export class ProceduralTorsoPainter {
         ctx.save();
         const sign = isRight ? 1 : -1;
 
-        // Perfectly calibrated landmark points matching reference photo:
-        const pNeck = { x: cx + sign * 60, y: 10 };
-        const pShoulder = { x: cx + sign * 245, y: 35 };
-        const pTip = { x: cx + sign * 215, y: 175 };
-        const pInnerV = { x: cx + sign * 14, y: 104 };
+        // Landmark points calibrated against reference Image 2:
+        const pNeck = { x: cx + sign * 84, y: 0 };
+        const pShoulder = { x: cx + sign * 248, y: 26 };
+        const pTip = { x: cx + sign * 198, y: 165 };
+        const pInnerV = { x: cx + sign * 24, y: 118 };
 
         // 1. Lapel Body
         ctx.beginPath();
         ctx.moveTo(pNeck.x, pNeck.y);
         // Collar band curve over shoulder
-        ctx.bezierCurveTo(cx + sign * 150, 12, pShoulder.x + sign * 15, pShoulder.y - 10, pShoulder.x, pShoulder.y);
+        ctx.bezierCurveTo(cx + sign * 165, 6, pShoulder.x - sign * 5, pShoulder.y - 10, pShoulder.x, pShoulder.y);
         // Outer curved edge sweeping down to tip
-        ctx.bezierCurveTo(pShoulder.x - sign * 5, 85, pTip.x + sign * 25, 135, pTip.x, pTip.y);
+        ctx.bezierCurveTo(pShoulder.x - sign * 12, 100, pTip.x + sign * 22, 132, pTip.x, pTip.y);
         // Bottom edge curving gently up towards inner placket notch
-        ctx.bezierCurveTo(pTip.x - sign * 55, pTip.y - 12, pInnerV.x + sign * 50, pInnerV.y + 12, pInnerV.x, pInnerV.y);
-        // Inner collar seam rising up to neck
-        ctx.bezierCurveTo(cx + sign * 28, 65, cx + sign * 40, 30, pNeck.x, pNeck.y);
+        ctx.bezierCurveTo(pTip.x - sign * 48, pTip.y - 10, pInnerV.x + sign * 40, pInnerV.y + 14, pInnerV.x, pInnerV.y);
+        // Inner collar seam rising up to neck following V-opening
+        ctx.bezierCurveTo(cx + sign * 42, 80, cx + sign * 60, 35, pNeck.x, pNeck.y);
         ctx.closePath();
 
         ctx.fillStyle = this.colors.collarBase;
         ctx.fill();
 
         // 2. Collar 3D Plastic Highlight & Shadow
-        const lapelGrad = ctx.createLinearGradient(cx, 10, cx + sign * 220, 175);
+        const lapelGrad = ctx.createLinearGradient(cx, 0, cx + sign * 198, 165);
         lapelGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
         lapelGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.05)');
-        lapelGrad.addColorStop(1, 'rgba(30, 48, 75, 0.25)');
+        lapelGrad.addColorStop(1, 'rgba(30, 48, 75, 0.22)');
         ctx.fillStyle = lapelGrad;
         ctx.fill();
 
-        // 3. Crisp White Inner Trim Pinstripe
+        // 3. Crisp White Inner Trim Pinstripe (running along shoulder, outer sweep, and bottom edge)
         ctx.strokeStyle = this.colors.collarInnerTrim;
-        ctx.lineWidth = 5.5;
+        ctx.lineWidth = 4.8;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         const trimShoulder = { x: pShoulder.x - sign * 12, y: pShoulder.y + 6 };
-        const trimTip = { x: pTip.x - sign * 10, y: pTip.y - 10 };
-        const trimInnerV = { x: pInnerV.x + sign * 8, y: pInnerV.y - 5 };
+        const trimTip = { x: pTip.x - sign * 12, y: pTip.y - 12 };
+        const trimInnerV = { x: pInnerV.x + sign * 10, y: pInnerV.y - 6 };
 
-        ctx.moveTo(trimShoulder.x, trimShoulder.y);
-        ctx.bezierCurveTo(trimShoulder.x - sign * 6, 85, trimTip.x + sign * 16, 135, trimTip.x, trimTip.y);
-        ctx.bezierCurveTo(trimTip.x - sign * 48, trimTip.y - 10, trimInnerV.x + sign * 42, trimInnerV.y + 8, trimInnerV.x, trimInnerV.y);
+        ctx.moveTo(cx + sign * 155, 12);
+        ctx.bezierCurveTo(pShoulder.x - sign * 16, 18, trimShoulder.x, trimShoulder.y - 6, trimShoulder.x, trimShoulder.y);
+        ctx.bezierCurveTo(trimShoulder.x - sign * 10, 100, trimTip.x + sign * 14, 130, trimTip.x, trimTip.y);
+        ctx.bezierCurveTo(trimTip.x - sign * 42, trimTip.y - 8, trimInnerV.x + sign * 34, trimInnerV.y + 8, trimInnerV.x, trimInnerV.y);
         ctx.stroke();
 
         // 4. Dark Blue Outer Border Seam
         ctx.strokeStyle = this.colors.collarOutline;
-        ctx.lineWidth = 5.5;
+        ctx.lineWidth = 5.2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(pNeck.x, pNeck.y);
-        ctx.bezierCurveTo(cx + sign * 150, 12, pShoulder.x + sign * 15, pShoulder.y - 10, pShoulder.x, pShoulder.y);
-        ctx.bezierCurveTo(pShoulder.x - sign * 5, 85, pTip.x + sign * 25, 135, pTip.x, pTip.y);
-        ctx.bezierCurveTo(pTip.x - sign * 55, pTip.y - 12, pInnerV.x + sign * 50, pInnerV.y + 12, pInnerV.x, pInnerV.y);
+        ctx.bezierCurveTo(cx + sign * 165, 6, pShoulder.x - sign * 5, pShoulder.y - 10, pShoulder.x, pShoulder.y);
+        ctx.bezierCurveTo(pShoulder.x - sign * 12, 100, pTip.x + sign * 22, 132, pTip.x, pTip.y);
+        ctx.bezierCurveTo(pTip.x - sign * 48, pTip.y - 10, pInnerV.x + sign * 40, pInnerV.y + 14, pInnerV.x, pInnerV.y);
         ctx.stroke();
 
-        // Inner neck seam
+        // Inner neck border seam
         ctx.strokeStyle = this.colors.collarOutline;
-        ctx.lineWidth = 4.0;
+        ctx.lineWidth = 4.2;
         ctx.beginPath();
         ctx.moveTo(pInnerV.x, pInnerV.y);
-        ctx.bezierCurveTo(cx + sign * 28, 65, cx + sign * 40, 30, pNeck.x, pNeck.y);
+        ctx.bezierCurveTo(cx + sign * 42, 80, cx + sign * 60, 35, pNeck.x, pNeck.y);
         ctx.stroke();
 
         // 5. Cast Shadow Under Lapel onto Chest
         ctx.strokeStyle = 'rgba(25, 40, 60, 0.22)';
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 5.5;
         ctx.beginPath();
         ctx.moveTo(pTip.x, pTip.y + 4);
-        ctx.bezierCurveTo(pTip.x - sign * 55, pTip.y - 8, pInnerV.x + sign * 50, pInnerV.y + 14, pInnerV.x, pInnerV.y + 6);
+        ctx.bezierCurveTo(pTip.x - sign * 48, pTip.y - 8, pInnerV.x + sign * 40, pInnerV.y + 16, pInnerV.x, pInnerV.y + 6);
         ctx.stroke();
 
         ctx.restore();
     }
 
     /**
-     * Draws the circular polo button on the placket.
+     * Draws the circular polo button on the placket matching Image 2.
      */
     drawButton(ctx, w, h) {
         const cx = w / 2; // 512
-        const buttonY = 160;
-        const buttonR = 19;
+        const buttonY = 168;
+        const buttonR = 16;
 
         ctx.save();
 
         // Button cast shadow
-        ctx.fillStyle = 'rgba(25, 40, 65, 0.35)';
+        ctx.fillStyle = 'rgba(25, 40, 65, 0.30)';
         ctx.beginPath();
         ctx.arc(cx + 1.5, buttonY + 2, buttonR, 0, Math.PI * 2);
         ctx.fill();
@@ -289,24 +294,17 @@ export class ProceduralTorsoPainter {
         ctx.arc(cx, buttonY, buttonR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Button rim seam
+        // Button outer rim seam
         ctx.strokeStyle = this.colors.buttonOutline;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 4.2;
         ctx.stroke();
 
-        // Inner circular indent ring
-        ctx.strokeStyle = 'rgba(56, 82, 115, 0.55)';
-        ctx.lineWidth = 2.0;
+        // Inner concentric circular stitch ring (matching Image 2)
+        ctx.strokeStyle = this.colors.buttonHole;
+        ctx.lineWidth = 2.8;
         ctx.beginPath();
-        ctx.arc(cx, buttonY, buttonR * 0.58, 0, Math.PI * 2);
+        ctx.arc(cx, buttonY, 6.8, 0, Math.PI * 2);
         ctx.stroke();
-
-        // Two button thread holes
-        ctx.fillStyle = this.colors.buttonHole;
-        ctx.beginPath();
-        ctx.arc(cx, buttonY - 4, 2.0, 0, Math.PI * 2);
-        ctx.arc(cx, buttonY + 4, 2.0, 0, Math.PI * 2);
-        ctx.fill();
 
         ctx.restore();
     }

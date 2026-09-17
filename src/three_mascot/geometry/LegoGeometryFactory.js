@@ -132,9 +132,9 @@ export class LegoGeometryFactory {
         const indices = [];
 
         const capRadius = 0.548;
-        const yTop = 0.78;
-        const capCenterY = 0.26;
-        const capH = yTop - capCenterY; // 0.52
+        const yTop = 0.84;
+        const capCenterY = 0.28;
+        const capH = yTop - capCenterY; // 0.56
 
         function getBottomY(theta) {
             const zNorm = -Math.cos(theta); // -1 at back, +1 at front
@@ -146,8 +146,8 @@ export class LegoGeometryFactory {
                 const t = (zNorm - (-0.1)) / 0.45;
                 return -0.12 + 0.16 * t; // Sides over temples/ears: -0.12 to 0.04
             } else {
-                // Front forehead: high parabolic arch leaving authentic 75px open forehead above eyebrows
-                const yForehead = 0.20 - 0.48 * (xVal * xVal);
+                // Front forehead: high parabolic arch leaving generous open forehead above eyebrows
+                const yForehead = 0.27 - 0.38 * (xVal * xVal);
                 const t = Math.min(1.0, (zNorm - 0.35) / 0.35);
                 return 0.04 * (1.0 - t) + yForehead * t;
             }

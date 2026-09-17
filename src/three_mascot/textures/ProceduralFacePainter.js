@@ -82,29 +82,29 @@ export class ProceduralFacePainter {
             irisHighlight: '#5E311A',   // Lower iris ambient bounce glow
             pupil: '#090503',           // Solid deep black pupil
             specular: '#FFFFFF',        // Primary studio catchlight
-            catchlightMajor: '#FFFFFF', // Sharp circular studio catchlight (1:30 position)
-            catchlightMinor: 'rgba(255, 255, 255, 0.70)', // Secondary smaller catchlight dot
+            catchlightMajor: '#FFFFFF', // Single brilliant circular studio catchlight (1:00 position)
+            catchlightMinor: 'rgba(255, 255, 255, 0.0)', // Ultra-subtle ambient bounce
             upperLidLine: '#1E0F08',    // Upper lash contour line
             lidCrease: '#582712',       // Double-fold upper eyelid crease
             eyebrow: '#190E08',         // Espresso-black feathered brow
-            noseShadow: 'rgba(82, 36, 16, 0.65)',      // Soft curved nostril crescents
-            noseHighlight: 'rgba(247, 200, 182, 0.45)', // Soft radial tip highlight
-            noseBridgeSheen: 'rgba(185, 115, 70, 0.35)', // Bridge vertical gradient
+            noseShadow: '#522410',      // Fleshy curved nostril cavities
+            noseHighlight: 'rgba(255, 235, 215, 0.65)', // Tip specular highlight
+            noseBridgeSheen: 'rgba(225, 150, 95, 0.35)', // Bridge vertical gradient
             mustache: '#180E09',        // Trimmed mustache hair
             mustacheStipple: '#2B180F', // Edge hair feathering
             upperLip: '#8D4A32',        // Warm terracotta upper lip
             lowerLip: '#B3644E',        // Fuller fleshy lower lip
-            lipHighlight: 'rgba(238, 160, 130, 0.65)',   // Gloss sheen on lower lip
-            lipSheen: 'rgba(238, 160, 130, 0.65)',
+            lipHighlight: 'rgba(255, 205, 185, 0.70)',   // Gloss sheen on lower lip
+            lipSheen: 'rgba(255, 205, 185, 0.70)',
             lipLine: '#38170B',         // Mouth closure seam
             mouthInterior: '#250808',   // Oral cavity for open visemes
             mouthInside: '#250808',
             teeth: '#F5F7FA',           // Clean white teeth
             tongue: '#B44949',          // Warm red tongue
             soulPatch: '#180E08',       // Under-lip soul patch
-            goatee: '#180E08',          // Chin goatee base
-            goateeBase: '#180E08',
-            goateeCurl: '#2C180E',      // Stippled micro-curl ringlets
+            goatee: '#1E100A',          // Chin goatee base
+            goateeBase: '#1E100A',
+            goateeCurl: '#120804',      // Stippled micro-curl ringlets
             goateePebble: '#2C180E',
         };
 
@@ -128,16 +128,16 @@ export class ProceduralFacePainter {
         // Feature landmarks (in 2048 x 1024 space, center front = 1024)
         this.landmarks = {
             centerX: 1024,
-            eyeSpacing: 146,       // Lateral offset to eye centers
-            eyeY: 480,             // Eye vertical center
-            eyeRadiusX: 88,        // Calibrated almond eye half-width (176px total width)
-            eyeRadiusY: 56,        // Calibrated almond eye half-height (112px total height)
-            browY: 388,            // Eyebrow level framing the eyes
-            noseY: 565,            // Nose tip level
-            mustacheY: 652,        // Mustache level (snugly above upper lip)
-            mouthY: 686,           // Mouth line level
-            soulPatchY: 728,       // Soul patch level
-            goateeY: 780,          // Chin goatee level (hugging chin contour)
+            eyeSpacing: 168,       // Lateral offset to eye centers in isotropic face space
+            eyeY: 520,             // Eye vertical center
+            eyeRadiusX: 92,        // Calibrated almond eye half-width in isotropic space (184px total)
+            eyeRadiusY: 70,        // Calibrated almond eye half-height (140px total)
+            browY: 420,            // Eyebrow level framing the eyes
+            noseY: 620,            // Nose tip level
+            mustacheY: 710,        // Mustache level (snugly above upper lip)
+            mouthY: 748,           // Mouth line level
+            soulPatchY: 795,       // Soul patch level
+            goateeY: 855,          // Chin goatee level (hugging chin contour)
         };
 
         this.canvas = null;
@@ -219,10 +219,19 @@ export class ProceduralFacePainter {
 
         const w = this.width;
         const h = this.height;
+        const cx = this.landmarks.centerX;
 
         // 1. Base ABS Plastic skin tone
         ctx.fillStyle = this.colors.skinBase;
         ctx.fillRect(0, 0, w, h);
+
+        // Aspect compensation: Minifigure head cylinder has circumference 3.267 and height 1.06.
+        // On a 2048 x 1024 canvas, horizontal pixels are stretched in 3D by 1.541x.
+        // Applying scale(0.6489, 1.0) around cx renders isotropic 1:1 facial anatomy in 3D!
+        ctx.save();
+        ctx.translate(cx, 0);
+        ctx.scale(0.6489, 1.0);
+        ctx.translate(-cx, 0);
 
         // 2. Soft ambient 3D facial shading & cheek warmth
         this.drawSubtleSkinShading(ctx);
@@ -230,7 +239,7 @@ export class ProceduralFacePainter {
         // 3. Eyebrows
         this.drawEyebrows(ctx);
 
-        // 4. Eyes (almond contour, clipped iris, dual catchlights, eyelid folds)
+        // 4. Eyes (almond contour, clipped iris, studio catchlight, eyelid folds)
         this.drawEyes(ctx);
 
         // 5. Stylized 3D Nose
@@ -244,45 +253,47 @@ export class ProceduralFacePainter {
 
         // 8. Soul patch & Chin Goatee
         this.drawBeard(ctx);
+
+        ctx.restore();
     }
 
     drawSubtleSkinShading(ctx) {
         const cx = this.landmarks.centerX;
         const ey = this.landmarks.eyeY;
 
-        // Soft warm cheek glow
-        const cheekGradL = ctx.createRadialGradient(cx - 160, ey + 75, 10, cx - 160, ey + 75, 110);
+        // Soft warm cheek glow centered under eyes
+        const cheekGradL = ctx.createRadialGradient(cx - 185, ey + 85, 10, cx - 185, ey + 85, 125);
         cheekGradL.addColorStop(0, 'rgba(198, 110, 60, 0.45)');
         cheekGradL.addColorStop(1, 'rgba(154, 87, 46, 0)');
         ctx.fillStyle = cheekGradL;
         ctx.beginPath();
-        ctx.arc(cx - 160, ey + 75, 110, 0, Math.PI * 2);
+        ctx.arc(cx - 185, ey + 85, 125, 0, Math.PI * 2);
         ctx.fill();
 
-        const cheekGradR = ctx.createRadialGradient(cx + 160, ey + 75, 10, cx + 160, ey + 75, 110);
+        const cheekGradR = ctx.createRadialGradient(cx + 185, ey + 85, 10, cx + 185, ey + 85, 125);
         cheekGradR.addColorStop(0, 'rgba(198, 110, 60, 0.45)');
         cheekGradR.addColorStop(1, 'rgba(154, 87, 46, 0)');
         ctx.fillStyle = cheekGradR;
         ctx.beginPath();
-        ctx.arc(cx + 160, ey + 75, 110, 0, Math.PI * 2);
+        ctx.arc(cx + 185, ey + 85, 125, 0, Math.PI * 2);
         ctx.fill();
 
         // Forehead center ambient highlight
-        const foreheadGrad = ctx.createRadialGradient(cx, 330, 10, cx, 330, 180);
+        const foreheadGrad = ctx.createRadialGradient(cx, 340, 10, cx, 340, 180);
         foreheadGrad.addColorStop(0, 'rgba(215, 138, 88, 0.35)');
         foreheadGrad.addColorStop(1, 'rgba(154, 87, 46, 0)');
         ctx.fillStyle = foreheadGrad;
         ctx.beginPath();
-        ctx.arc(cx, 330, 180, 0, Math.PI * 2);
+        ctx.arc(cx, 340, 180, 0, Math.PI * 2);
         ctx.fill();
 
-        // Chin subtle highlight
-        const chinGrad = ctx.createRadialGradient(cx, 810, 8, cx, 810, 90);
+        // Chin subtle highlight (beneath goatee)
+        const chinGrad = ctx.createRadialGradient(cx, 890, 8, cx, 890, 95);
         chinGrad.addColorStop(0, 'rgba(205, 125, 75, 0.28)');
         chinGrad.addColorStop(1, 'rgba(154, 87, 46, 0)');
         ctx.fillStyle = chinGrad;
         ctx.beginPath();
-        ctx.arc(cx, 810, 90, 0, Math.PI * 2);
+        ctx.arc(cx, 890, 95, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -331,8 +342,8 @@ export class ProceduralFacePainter {
             ctx.lineWidth = 6;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(-rx, 0);
-            ctx.quadraticCurveTo(0, ry * 0.35, rx, -2);
+            ctx.moveTo(-rx * 0.95, 0);
+            ctx.quadraticCurveTo(0, ry * 0.35, rx * 0.95, -2);
             ctx.stroke();
 
             // Upper lid crease above closed eye
@@ -347,122 +358,157 @@ export class ProceduralFacePainter {
             return;
         }
 
-        // --- 1. Sclera Aperture (Almond Shape) ---
-        // Distinct Lego almond contour: curved top, gentle bottom
+        // Medial side (towards nose/center) is -sign * rx; lateral side (towards temple) is +sign * rx
+        const sign = isRight ? 1 : -1;
+        const innerX = -sign * rx * 0.90;
+        const outerX = sign * rx * 0.90;
+
+        // --- 1. Sclera Aperture (Generous open almond eye matching Image 1) ---
         ctx.save();
         ctx.beginPath();
-        // Start at inner corner
-        ctx.moveTo(-rx, 2);
-        // Top eyelid curve (arches up and slightly outward)
-        ctx.bezierCurveTo(-rx * 0.5, -ry * 1.35 * scaleY, rx * 0.5, -ry * 1.30 * scaleY, rx, -2);
-        // Bottom eyelid curve (raised if squinting with smiling emotion)
-        ctx.bezierCurveTo(rx * 0.5, (ry * 0.95 - squintOffset) * scaleY, -rx * 0.5, (ry * 0.90 - squintOffset) * scaleY, -rx, 2);
+        ctx.moveTo(innerX, 0);
+        // Top eyelid dome: smooth majestic arch, peaks slightly medial of center
+        ctx.bezierCurveTo(-sign * rx * 0.40, -ry * 1.25 * scaleY, sign * rx * 0.20, -ry * 1.20 * scaleY, outerX, -2);
+        // Outer corner rounded sweep
+        ctx.bezierCurveTo(outerX + sign * 6, 2 * scaleY, outerX + sign * 2, 8 * scaleY, sign * rx * 0.70, (ry * 0.70 - squintOffset) * scaleY);
+        // Bottom eyelid: generous downward curve revealing rounded sclera
+        ctx.bezierCurveTo(sign * rx * 0.30, (ry * 1.05 - squintOffset) * scaleY, -sign * rx * 0.30, (ry * 1.00 - squintOffset) * scaleY, -sign * rx * 0.70, (ry * 0.60 - squintOffset) * scaleY);
+        // Inner corner rounded nook
+        ctx.bezierCurveTo(innerX - sign * 4, 6 * scaleY, innerX - sign * 6, 2 * scaleY, innerX, 0);
         ctx.closePath();
         ctx.clip();
 
-        // Fill white sclera
+        // Fill warm white sclera
         ctx.fillStyle = this.colors.eyeWhite;
         ctx.fillRect(-rx - 25, -ry * scaleY - 25, (rx + 25) * 2, (ry * scaleY + 25) * 2);
 
-        // Soft upper eyelid cast shadow on the eyeball
-        const eyeShadow = ctx.createLinearGradient(0, -ry * scaleY, 0, ry * scaleY * 0.5);
-        eyeShadow.addColorStop(0, 'rgba(80, 60, 50, 0.28)');
+        // Eyeball 3D spherical depth shading
+        const eye3D = ctx.createRadialGradient(0, -ry * 0.2, ry * 0.3, 0, 0, rx * 1.1);
+        eye3D.addColorStop(0, 'rgba(255, 255, 255, 0.0)');
+        eye3D.addColorStop(0.75, 'rgba(255, 255, 255, 0.0)');
+        eye3D.addColorStop(1.0, 'rgba(180, 160, 150, 0.25)');
+        ctx.fillStyle = eye3D;
+        ctx.fillRect(-rx - 25, -ry * scaleY - 25, (rx + 25) * 2, (ry * scaleY + 25) * 2);
+
+        // Soft upper eyelid cast shadow on sclera
+        const eyeShadow = ctx.createLinearGradient(0, -ry * scaleY, 0, ry * scaleY * 0.4);
+        eyeShadow.addColorStop(0, 'rgba(60, 30, 15, 0.38)');
         eyeShadow.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = eyeShadow;
-        ctx.fillRect(-rx, -ry * scaleY, rx * 2, ry * scaleY * 1.5);
+        ctx.fillRect(-rx, -ry * scaleY, rx * 2, ry * scaleY * 1.4);
 
         // --- 2. Iris & Pupil with Gaze Tracking ---
+        // Sits slightly high so top is clipped by upper eyelid
         const irisX = gaze.offsetX;
-        const irisY = gaze.offsetY + ry * 0.08 * scaleY;
-        const irisR = ry * 0.74; // Calibrated ~41px radius leaves generous white sclera visible
+        const irisY = gaze.offsetY - ry * 0.10 * scaleY;
+        const irisR = ry * 0.82; // Fills ~80% of vertical height
 
-        // Dark espresso outer iris
+        // Dark espresso outer iris rim
         ctx.fillStyle = this.colors.irisOuter;
         ctx.beginPath();
         ctx.arc(irisX, irisY, irisR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Warm espresso gradient
-        const irisGrad = ctx.createRadialGradient(irisX, irisY, irisR * 0.25, irisX, irisY, irisR);
+        // Warm chestnut espresso radial gradient
+        const irisGrad = ctx.createRadialGradient(irisX, irisY, irisR * 0.20, irisX, irisY, irisR);
         irisGrad.addColorStop(0, this.colors.irisHighlight);
-        irisGrad.addColorStop(0.65, this.colors.irisInner);
-        irisGrad.addColorStop(1, this.colors.irisOuter);
+        irisGrad.addColorStop(0.60, this.colors.irisInner);
+        irisGrad.addColorStop(1.0, this.colors.irisOuter);
         ctx.fillStyle = irisGrad;
         ctx.beginPath();
-        ctx.arc(irisX, irisY, irisR * 0.94, 0, Math.PI * 2);
+        ctx.arc(irisX, irisY, irisR * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ambient bounce glow at 7:30 (lower-left iris reflection from cheek)
+        const bounceGrad = ctx.createRadialGradient(irisX - irisR * 0.45, irisY + irisR * 0.45, 2, irisX - irisR * 0.45, irisY + irisR * 0.45, irisR * 0.55);
+        bounceGrad.addColorStop(0, 'rgba(215, 140, 90, 0.35)');
+        bounceGrad.addColorStop(1, 'rgba(61, 30, 15, 0)');
+        ctx.fillStyle = bounceGrad;
+        ctx.beginPath();
+        ctx.arc(irisX - irisR * 0.45, irisY + irisR * 0.45, irisR * 0.55, 0, Math.PI * 2);
         ctx.fill();
 
         // Black Pupil
-        const pupilR = irisR * 0.52;
+        const pupilR = irisR * 0.50;
         ctx.fillStyle = this.colors.pupil;
         ctx.beginPath();
         ctx.arc(irisX, irisY, pupilR, 0, Math.PI * 2);
         ctx.fill();
 
-        // --- DUAL STUDIO CATCHLIGHTS AT 1:30 (No bottom reflections) ---
-        // Major Catchlight: Pure white circle, radius 10.5px at (irisX + 11, irisY - 11)
-        const specX1 = irisX + 11;
-        const specY1 = irisY - 11;
-        const specR1 = 10.5;
+        // --- SINGLE DOMINANT STUDIO SOFTBOX CATCHLIGHT AT 1:00 ---
+        // (Matching Image 1: brilliant circular softbox reflection with soft halo bloom)
+        const specX = irisX + irisR * 0.34;
+        const specY = irisY - irisR * 0.36;
+        const specR = 10.5;
 
-        // Diffuse studio softbox halo around major catchlight
-        const haloGrad = ctx.createRadialGradient(specX1, specY1, specR1 * 0.3, specX1, specY1, specR1 * 2.2);
-        haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.60)');
+        // Soft radiant bloom halo
+        const haloGrad = ctx.createRadialGradient(specX, specY, specR * 0.25, specX, specY, specR * 2.4);
+        haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
+        haloGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.20)');
         haloGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = haloGrad;
         ctx.beginPath();
-        ctx.arc(specX1, specY1, specR1 * 2.2, 0, Math.PI * 2);
+        ctx.arc(specX, specY, specR * 2.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Sharp pure white circular major catchlight
-        ctx.fillStyle = this.colors.catchlightMajor || '#FFFFFF';
+        // Crisp brilliant white circular studio catchlight
+        ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.arc(specX1, specY1, specR1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Minor Catchlight: 70% opacity white dot, radius 4.5px at (irisX + 17, irisY + 4)
-        const specX2 = irisX + 17;
-        const specY2 = irisY + 4;
-        const specR2 = 4.5;
-        ctx.fillStyle = this.colors.catchlightMinor || 'rgba(255, 255, 255, 0.70)';
-        ctx.beginPath();
-        ctx.arc(specX2, specY2, specR2, 0, Math.PI * 2);
+        ctx.arc(specX, specY, specR, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore(); // Restore sclera clip
 
-        // --- 3. Eyelid Contours & Creases (Unclipped) ---
-        // Heavy upper lash line
+        // --- 3. Eyelid Contours & Fleshy Upper Crease (Unclipped) ---
+        // Heavy upper lash line (smooth rounded arch covering top of iris)
         ctx.strokeStyle = this.colors.upperLidLine;
-        ctx.lineWidth = 7.5;
+        ctx.lineWidth = 8.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(innerX, 0);
+        ctx.bezierCurveTo(-sign * rx * 0.40, -ry * 1.27 * scaleY, sign * rx * 0.20, -ry * 1.22 * scaleY, outerX, -2);
+        ctx.stroke();
+
+        // Delicate lower lash line (tracing bottom eyelid contour cleanly)
+        ctx.strokeStyle = 'rgba(40, 20, 12, 0.42)';
+        ctx.lineWidth = 3.2;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-rx, 2);
-        ctx.bezierCurveTo(-rx * 0.5, -ry * 1.38 * scaleY, rx * 0.5, -ry * 1.33 * scaleY, rx, -2);
+        ctx.moveTo(outerX, -2);
+        ctx.bezierCurveTo(outerX + sign * 6, 2 * scaleY, outerX + sign * 2, 8 * scaleY, sign * rx * 0.70, (ry * 0.70 - squintOffset) * scaleY);
+        ctx.bezierCurveTo(sign * rx * 0.30, (ry * 1.05 - squintOffset) * scaleY, -sign * rx * 0.30, (ry * 1.00 - squintOffset) * scaleY, -sign * rx * 0.70, (ry * 0.60 - squintOffset) * scaleY);
+        ctx.bezierCurveTo(innerX - sign * 4, 6 * scaleY, innerX - sign * 6, 2 * scaleY, innerX, 0);
         ctx.stroke();
 
-        // Delicate lower lash line
-        ctx.strokeStyle = 'rgba(30, 17, 10, 0.40)';
-        ctx.lineWidth = 3.2;
+        // --- 4. Prominent Fleshy Upper Eyelid Hood / Crease ---
+        const socketGrad = ctx.createLinearGradient(0, -ry * scaleY - 26, 0, -ry * scaleY);
+        socketGrad.addColorStop(0, 'rgba(90, 42, 18, 0.0)');
+        socketGrad.addColorStop(0.5, 'rgba(90, 42, 18, 0.30)');
+        socketGrad.addColorStop(1, 'rgba(90, 42, 18, 0.0)');
+        ctx.fillStyle = socketGrad;
         ctx.beginPath();
-        ctx.moveTo(rx, -2);
-        ctx.bezierCurveTo(rx * 0.5, (ry * 0.95 - squintOffset) * scaleY, -rx * 0.5, (ry * 0.90 - squintOffset) * scaleY, -rx, 2);
-        ctx.stroke();
+        ctx.moveTo(innerX, -ry * scaleY - 12);
+        ctx.quadraticCurveTo(0, -ry * scaleY - 26, outerX, -ry * scaleY - 16);
+        ctx.lineTo(outerX, -ry * scaleY);
+        ctx.quadraticCurveTo(0, -ry * scaleY, innerX, -ry * scaleY);
+        ctx.closePath();
+        ctx.fill();
 
-        // Double-fold upper eyelid crease (16px above lash line)
+        // Crisp double-fold eyelid crease line
         ctx.strokeStyle = this.colors.lidCrease || '#582712';
-        ctx.lineWidth = 3.8;
+        ctx.lineWidth = 3.6;
         ctx.beginPath();
-        ctx.moveTo(-rx * 0.85, -ry * scaleY - 11);
-        ctx.quadraticCurveTo(0, -ry * scaleY - 20, rx * 0.85, -ry * scaleY - 14);
+        ctx.moveTo(innerX + sign * 5, -ry * scaleY - 12);
+        ctx.quadraticCurveTo(0, -ry * scaleY - 22, outerX - sign * 5, -ry * scaleY - 15);
         ctx.stroke();
 
-        // Lower eyelid soft crease (eye bag / fold)
-        ctx.strokeStyle = 'rgba(95, 45, 22, 0.32)';
-        ctx.lineWidth = 2.6;
+        // Lower eyelid soft contour crease (eye bag fold)
+        ctx.strokeStyle = 'rgba(95, 45, 22, 0.28)';
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.moveTo(-rx * 0.75, (ry + 9 - squintOffset) * scaleY);
-        ctx.quadraticCurveTo(0, (ry + 15 - squintOffset) * scaleY, rx * 0.75, (ry + 9 - squintOffset) * scaleY);
+        ctx.moveTo(-rx * 0.70, (ry + 8 - squintOffset) * scaleY);
+        ctx.quadraticCurveTo(0, (ry + 14 - squintOffset) * scaleY, rx * 0.70, (ry + 8 - squintOffset) * scaleY);
         ctx.stroke();
 
         ctx.restore();
@@ -504,31 +550,51 @@ export class ProceduralFacePainter {
         }
         const sign = isRight ? 1 : -1;
 
+        // 1. Brow bone ambient highlight (warm ridge glow above the brow)
+        const boneGrad = ctx.createRadialGradient(sign * 10, -36 * arch, 5, sign * 10, -36 * arch, 65);
+        boneGrad.addColorStop(0, 'rgba(215, 140, 88, 0.35)');
+        boneGrad.addColorStop(1, 'rgba(154, 87, 46, 0.0)');
+        ctx.fillStyle = boneGrad;
+        ctx.beginPath();
+        ctx.arc(sign * 10, -36 * arch, 65, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Solid, sculpted Lego eyebrow body framing large almond eye
         ctx.fillStyle = this.colors.eyebrow;
         ctx.beginPath();
-        // Sleek, solid, beautifully arched Lego eyebrow calibrated to eye width
-        // Medial start: rounded, thick
-        ctx.moveTo(-sign * 86, 12);
-        // Arch rising up to apex
-        ctx.quadraticCurveTo(-sign * 28, -26 * arch, sign * 30, -24 * arch);
-        // Tapering down towards temple
-        ctx.quadraticCurveTo(sign * 88, -8, sign * 102, 5);
-        // Bottom contour returning smoothly above eyelid
-        ctx.quadraticCurveTo(sign * 80, 2, sign * 25, -10);
-        ctx.quadraticCurveTo(-sign * 30, -10, -sign * 86, 12);
+        // Inner head medial start (rounded, confident)
+        ctx.moveTo(-sign * 96, 10);
+        // Arching upward along the superior crest
+        ctx.bezierCurveTo(-sign * 50, -26 * arch, sign * 18, -32 * arch, sign * 75, -18 * arch);
+        // Tapering to outer tail
+        ctx.quadraticCurveTo(sign * 110, -7 * arch, sign * 118, 4);
+        // Tail rounded tip
+        ctx.quadraticCurveTo(sign * 108, 6, sign * 94, 4);
+        // Inferior contour returning above eye socket
+        ctx.bezierCurveTo(sign * 40, -9 * arch, -sign * 30, -7 * arch, -sign * 92, 16);
+        // Medial head rounded finish
+        ctx.quadraticCurveTo(-sign * 100, 14, -sign * 96, 10);
         ctx.closePath();
         ctx.fill();
 
-        // Feathered hair strokes along the upper crest
-        ctx.strokeStyle = this.colors.eyebrow;
-        ctx.lineWidth = 2.0;
+        // 3. Natural micro-hair grain along the flow of the brow
+        ctx.strokeStyle = '#0F0704';
+        ctx.lineWidth = 1.8;
         ctx.lineCap = 'round';
-        const browFeathers = [
-            [-72, 10, -74, 4], [-54, 0, -56, -7], [-36, -12, -38, -19],
-            [-18, -20, -19, -26], [0, -23, 0, -30], [18, -22, 19, -28],
-            [36, -18, 38, -23], [54, -13, 56, -17], [72, -6, 74, -10]
+        const headHairs = [
+            [-94, 12, -90, 4],
+            [-84, 6, -80, -3],
+            [-74, 1, -68, -9],
+            [-62, -6, -54, -15],
+            [-48, -13, -38, -20],
+            [-32, -18, -20, -23],
+            [-14, -22, -2, -25],
+            [6, -23, 22, -25],
+            [32, -21, 48, -20],
+            [58, -17, 72, -14],
+            [82, -11, 96, -6]
         ];
-        for (const [x1, y1, x2, y2] of browFeathers) {
+        for (const [x1, y1, x2, y2] of headHairs) {
             ctx.beginPath();
             ctx.moveTo(sign * x1, y1 * arch);
             ctx.lineTo(sign * x2, y2 * arch);
@@ -544,48 +610,111 @@ export class ProceduralFacePainter {
 
         ctx.save();
 
-        // 1. Volumetric Nose Bridge highlight
-        const bridgeGrad = ctx.createLinearGradient(cx, ny - 80, cx, ny);
-        bridgeGrad.addColorStop(0, 'rgba(195, 120, 75, 0.0)');
-        bridgeGrad.addColorStop(1, 'rgba(215, 140, 90, 0.45)');
+        // 1. Dorsal Bridge Lateral Shadows (giving the bridge 3D elevation from the face plane)
+        const bridgeShadowL = ctx.createLinearGradient(cx - 24, 0, cx - 10, 0);
+        bridgeShadowL.addColorStop(0, 'rgba(80, 36, 16, 0.25)');
+        bridgeShadowL.addColorStop(1, 'rgba(154, 87, 46, 0.0)');
+        ctx.fillStyle = bridgeShadowL;
+        ctx.fillRect(cx - 24, ny - 90, 14, 80);
+
+        const bridgeShadowR = ctx.createLinearGradient(cx + 24, 0, cx + 10, 0);
+        bridgeShadowR.addColorStop(0, 'rgba(80, 36, 16, 0.25)');
+        bridgeShadowR.addColorStop(1, 'rgba(154, 87, 46, 0.0)');
+        ctx.fillStyle = bridgeShadowR;
+        ctx.fillRect(cx + 10, ny - 90, 14, 80);
+
+        // 2. Dorsal Bridge Vertical Ridge Highlight
+        const bridgeGrad = ctx.createLinearGradient(cx, ny - 90, cx, ny - 10);
+        bridgeGrad.addColorStop(0, 'rgba(215, 140, 90, 0.0)');
+        bridgeGrad.addColorStop(0.5, 'rgba(225, 155, 105, 0.40)');
+        bridgeGrad.addColorStop(1, 'rgba(235, 165, 115, 0.55)');
         ctx.fillStyle = bridgeGrad;
         ctx.beginPath();
-        ctx.moveTo(cx - 18, ny - 80);
-        ctx.lineTo(cx + 18, ny - 80);
-        ctx.lineTo(cx + 28, ny);
-        ctx.lineTo(cx - 28, ny);
+        ctx.moveTo(cx - 11, ny - 90);
+        ctx.lineTo(cx + 11, ny - 90);
+        ctx.lineTo(cx + 16, ny - 10);
+        ctx.lineTo(cx - 16, ny - 10);
         ctx.closePath();
         ctx.fill();
 
-        // 2. Central Bulbous Tip (smooth Lego rounded nose)
-        const tipGrad = ctx.createRadialGradient(cx, ny - 4, 6, cx, ny, 36);
-        tipGrad.addColorStop(0, 'rgba(235, 155, 105, 0.65)');
-        tipGrad.addColorStop(0.65, 'rgba(190, 110, 60, 0.30)');
-        tipGrad.addColorStop(1, 'rgba(148, 83, 43, 0)');
+        // 3. Left and Right Nostril Wings (curving fleshy lateral flares)
+        const wingGradL = ctx.createRadialGradient(cx - 28, ny, 3, cx - 28, ny + 2, 20);
+        wingGradL.addColorStop(0, 'rgba(225, 145, 95, 0.65)');
+        wingGradL.addColorStop(0.7, 'rgba(175, 95, 52, 0.40)');
+        wingGradL.addColorStop(1, 'rgba(120, 55, 25, 0.0)');
+        ctx.fillStyle = wingGradL;
+        ctx.beginPath();
+        ctx.arc(cx - 28, ny + 2, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        const wingGradR = ctx.createRadialGradient(cx + 28, ny, 3, cx + 28, ny + 2, 20);
+        wingGradR.addColorStop(0, 'rgba(225, 145, 95, 0.65)');
+        wingGradR.addColorStop(0.7, 'rgba(175, 95, 52, 0.40)');
+        wingGradR.addColorStop(1, 'rgba(120, 55, 25, 0.0)');
+        ctx.fillStyle = wingGradR;
+        ctx.beginPath();
+        ctx.arc(cx + 28, ny + 2, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nostril wing lateral crease line
+        ctx.strokeStyle = 'rgba(95, 42, 18, 0.38)';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx - 28, ny + 2, 17, Math.PI * 0.65, Math.PI * 1.35);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + 28, ny + 2, 17, -Math.PI * 0.35, Math.PI * 0.35);
+        ctx.stroke();
+
+        // 4. Central Bulbous Nose Tip (spherical 3D volumetric highlight)
+        const tipGrad = ctx.createRadialGradient(cx, ny - 4, 4, cx, ny + 2, 32);
+        tipGrad.addColorStop(0, 'rgba(242, 168, 120, 0.75)');
+        tipGrad.addColorStop(0.55, 'rgba(205, 125, 75, 0.45)');
+        tipGrad.addColorStop(0.85, 'rgba(150, 78, 40, 0.20)');
+        tipGrad.addColorStop(1, 'rgba(100, 45, 20, 0.0)');
         ctx.fillStyle = tipGrad;
         ctx.beginPath();
-        ctx.arc(cx, ny, 36, 0, Math.PI * 2);
+        ctx.arc(cx, ny + 2, 32, 0, Math.PI * 2);
         ctx.fill();
 
-        // 3. Left and Right Nostril Wings
-        ctx.fillStyle = 'rgba(180, 100, 52, 0.45)';
+        // Under-tip ambient shadow (separates nose from mustache)
+        const underTipGrad = ctx.createLinearGradient(cx, ny + 8, cx, ny + 22);
+        underTipGrad.addColorStop(0, 'rgba(75, 32, 14, 0.45)');
+        underTipGrad.addColorStop(1, 'rgba(75, 32, 14, 0.0)');
+        ctx.fillStyle = underTipGrad;
         ctx.beginPath();
-        ctx.arc(cx - 36, ny + 4, 18, 0, Math.PI * 2);
-        ctx.arc(cx + 36, ny + 4, 18, 0, Math.PI * 2);
+        ctx.ellipse(cx, ny + 14, 26, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 4. Nostril Under-Creases / Holes (dark curved slits)
+        // 5. Nostril Base Cavities (dark curved espresso apertures)
         ctx.fillStyle = this.colors.noseShadow;
         ctx.beginPath();
-        ctx.ellipse(cx - 24, ny + 14, 13, 6, -0.22, 0, Math.PI * 2);
-        ctx.ellipse(cx + 24, ny + 14, 13, 6, 0.22, 0, Math.PI * 2);
+        ctx.ellipse(cx - 18, ny + 13, 11, 5.5, -0.25, 0, Math.PI * 2);
+        ctx.ellipse(cx + 18, ny + 13, 11, 5.5, 0.25, 0, Math.PI * 2);
         ctx.fill();
 
-        // 5. Crisp Specular highlight on nose tip
-        ctx.fillStyle = 'rgba(255, 235, 215, 0.50)';
+        // 6. Crisp Specular Dot on Nose Tip (matching 1:00 key light)
+        const specX = cx + 4;
+        const specY = ny - 6;
+        const specGrad = ctx.createRadialGradient(specX, specY, 1.5, specX, specY, 9);
+        specGrad.addColorStop(0, 'rgba(255, 245, 235, 0.85)');
+        specGrad.addColorStop(0.5, 'rgba(255, 235, 215, 0.35)');
+        specGrad.addColorStop(1, 'rgba(255, 235, 215, 0.0)');
+        ctx.fillStyle = specGrad;
         ctx.beginPath();
-        ctx.arc(cx, ny - 6, 9, 0, Math.PI * 2);
+        ctx.arc(specX, specY, 9, 0, Math.PI * 2);
         ctx.fill();
+
+        // 7. Subtle Philtrum Column Furrows
+        ctx.strokeStyle = 'rgba(85, 38, 16, 0.22)';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, ny + 16);
+        ctx.lineTo(cx - 8, ny + 32);
+        ctx.moveTo(cx + 7, ny + 16);
+        ctx.lineTo(cx + 8, ny + 32);
+        ctx.stroke();
 
         ctx.restore();
     }
@@ -607,32 +736,63 @@ export class ProceduralFacePainter {
     drawMustacheHalf(ctx, isRight) {
         ctx.save();
         const sign = isRight ? 1 : -1;
+        const gap = 9; // 18px total gap across philtrum center
 
-        // Gap from center: 9px (18px philtrum gap across center)
-        const gap = 9;
+        // 1. Mustache Solid Body Fill
         ctx.fillStyle = this.colors.mustache;
-
         ctx.beginPath();
-        // Start at philtrum inner top
+        // Inner philtrum top
         ctx.moveTo(sign * gap, 2);
-        // Arch up across upper lip with full, handsome body
-        ctx.bezierCurveTo(sign * 26, -16, sign * 60, -13, sign * 98, 9);
-        // Curve down over corner of mouth
-        ctx.bezierCurveTo(sign * 105, 18, sign * 86, 21, sign * 68, 14);
+        // Arching smoothly over upper lip
+        ctx.bezierCurveTo(sign * 28, -16, sign * 64, -14, sign * 98, 8);
+        // Graceful drape over mouth corner
+        ctx.bezierCurveTo(sign * 106, 16, sign * 88, 20, sign * 70, 13);
         // Bottom contour returning closely along upper lip
-        ctx.bezierCurveTo(sign * 42, 9, sign * 22, 6, sign * gap, 8);
+        ctx.bezierCurveTo(sign * 46, 8, sign * 24, 6, sign * gap, 8);
+        // Philtrum vertical inner border
         ctx.closePath();
         ctx.fill();
 
-        // Micro-stubble texture
-        ctx.fillStyle = this.colors.mustacheStipple;
-        const dots = [
-            [16, 1], [26, -7], [45, -10], [64, -7], [80, 2], [92, 8],
-            [20, 6], [38, 6], [56, 7], [72, 11], [32, 3], [48, 1]
+        // 2. Subtle 3D Volume Ridge Highlight (warm dark brown sheen along the crest)
+        ctx.strokeStyle = 'rgba(72, 42, 26, 0.45)';
+        ctx.lineWidth = 4.0;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sign * (gap + 6), 4);
+        ctx.bezierCurveTo(sign * 32, -10, sign * 62, -8, sign * 92, 9);
+        ctx.stroke();
+
+        // 3. Delicate Micro-Stubble & Feathered Edge Hairs
+        ctx.strokeStyle = this.colors.mustacheStipple;
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+
+        // Feathered hairs along upper contour
+        const topHairs = [
+            [12, 0, 14, -5],
+            [22, -8, 26, -14],
+            [34, -13, 39, -19],
+            [48, -15, 54, -20],
+            [62, -14, 68, -18],
+            [76, -8, 82, -12],
+            [88, 1, 94, -2]
         ];
-        for (const [dx, dy] of dots) {
+        for (const [x1, y1, x2, y2] of topHairs) {
             ctx.beginPath();
-            ctx.arc(sign * dx, dy, 2.0, 0, Math.PI * 2);
+            ctx.moveTo(sign * x1, y1);
+            ctx.lineTo(sign * x2, y2);
+            ctx.stroke();
+        }
+
+        // Soft micro-stipples inside the mustache body
+        ctx.fillStyle = '#0D0604';
+        const stipples = [
+            [16, 4], [26, -3], [42, -6], [58, -4], [72, 2], [84, 8],
+            [20, 7], [36, 5], [52, 4], [66, 8], [30, 1], [46, -1], [60, 2]
+        ];
+        for (const [dx, dy] of stipples) {
+            ctx.beginPath();
+            ctx.arc(sign * dx, dy, 1.4, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -705,59 +865,78 @@ export class ProceduralFacePainter {
     }
 
     drawMouthRest(ctx) {
-        const mw = 106; // Mouth half-width (confident, warm smile)
+        const mw = 118; // Confident, warm smile half-width (matching calibrated face proportions)
 
-        // 1. Upper Lip (Warm terracotta with subtle Cupid's bow)
+        // 1. Upper Lip (Warm terracotta with sculpted Cupid's bow)
         ctx.fillStyle = this.colors.upperLip;
         ctx.beginPath();
         // Cupid's bow top
-        ctx.moveTo(-mw, -2);
-        ctx.quadraticCurveTo(-mw * 0.45, -16, -16, -12);
-        ctx.lineTo(0, -7); // Center notch
-        ctx.lineTo(16, -12);
-        ctx.quadraticCurveTo(mw * 0.45, -16, mw, -2);
-        // Mouth line bottom
-        ctx.quadraticCurveTo(mw * 0.45, 5, 0, 6);
-        ctx.quadraticCurveTo(-mw * 0.45, 5, -mw, -2);
+        ctx.moveTo(-mw, -8);
+        ctx.quadraticCurveTo(-mw * 0.45, -18, -20, -14);
+        ctx.lineTo(0, -6); // Center notch dip
+        ctx.lineTo(20, -14);
+        ctx.quadraticCurveTo(mw * 0.45, -18, mw, -8);
+        // Returning along smile seam
+        ctx.bezierCurveTo(mw * 0.55, 3, mw * 0.2, 2, 0, 2);
+        ctx.bezierCurveTo(-mw * 0.2, 2, -mw * 0.55, 3, -mw, -8);
         ctx.closePath();
         ctx.fill();
 
-        // 2. Lower Lip (Fuller fleshy warm rose with rounded contour)
+        // 2. Lower Lip (Fuller fleshy warm rose with smooth rounded contour)
         ctx.fillStyle = this.colors.lowerLip;
         ctx.beginPath();
-        ctx.moveTo(-mw * 0.88, 0);
-        ctx.quadraticCurveTo(-mw * 0.45, 28, 0, 30);
-        ctx.quadraticCurveTo(mw * 0.45, 28, mw * 0.88, 0);
-        ctx.quadraticCurveTo(mw * 0.45, 5, 0, 6);
-        ctx.quadraticCurveTo(-mw * 0.45, 5, -mw * 0.88, 0);
+        ctx.moveTo(-mw * 0.86, -6);
+        ctx.quadraticCurveTo(-mw * 0.48, 30, 0, 32);
+        ctx.quadraticCurveTo(mw * 0.48, 30, mw * 0.86, -6);
+        // Hugging smile seam
+        ctx.bezierCurveTo(mw * 0.45, 3, mw * 0.2, 2, 0, 2);
+        ctx.bezierCurveTo(-mw * 0.2, 2, -mw * 0.45, 3, -mw * 0.86, -6);
         ctx.closePath();
         ctx.fill();
 
-        // Gloss highlight on lower lip
-        const lipGloss = ctx.createLinearGradient(0, 10, 0, 26);
-        lipGloss.addColorStop(0, 'rgba(238, 160, 130, 0.75)');
-        lipGloss.addColorStop(1, 'rgba(185, 100, 78, 0.0)');
-        ctx.fillStyle = lipGloss;
+        // Fleshy Lower Lip 3D Volume Gradient
+        const lipDepth = ctx.createLinearGradient(0, 2, 0, 32);
+        lipDepth.addColorStop(0, 'rgba(140, 58, 40, 0.35)');
+        lipDepth.addColorStop(0.5, 'rgba(255, 255, 255, 0.0)');
+        lipDepth.addColorStop(1, 'rgba(100, 38, 22, 0.40)');
+        ctx.fillStyle = lipDepth;
         ctx.beginPath();
-        ctx.ellipse(0, 15, mw * 0.48, 7, 0, 0, Math.PI * 2);
+        ctx.moveTo(-mw * 0.86, -6);
+        ctx.quadraticCurveTo(-mw * 0.48, 30, 0, 32);
+        ctx.quadraticCurveTo(mw * 0.48, 30, mw * 0.86, -6);
+        ctx.closePath();
         ctx.fill();
 
-        // 3. Mouth Seam (Dark confident closed smile line)
+        // Brilliant Gloss Highlight on Lower Lip (matching concept art specular reflection)
+        const glossGrad = ctx.createLinearGradient(0, 10, 0, 26);
+        glossGrad.addColorStop(0, 'rgba(255, 215, 195, 0.80)');
+        glossGrad.addColorStop(0.65, 'rgba(240, 175, 145, 0.35)');
+        glossGrad.addColorStop(1, 'rgba(200, 120, 95, 0.0)');
+        ctx.fillStyle = glossGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 17, mw * 0.44, 7.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Mouth Seam (Dark, confident upturned smile line)
         ctx.strokeStyle = this.colors.lipLine;
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 5.2;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-mw, -3);
-        ctx.quadraticCurveTo(-mw * 0.45, 6, 0, 6);
-        ctx.quadraticCurveTo(mw * 0.45, 6, mw, -3);
+        ctx.moveTo(-mw, -8);
+        ctx.bezierCurveTo(-mw * 0.55, 3, -mw * 0.2, 2, 0, 2);
+        ctx.bezierCurveTo(mw * 0.2, 2, mw * 0.55, 3, mw, -8);
         ctx.stroke();
 
-        // Subtle smile corner dimple indents
-        ctx.fillStyle = 'rgba(56, 23, 11, 0.65)';
+        // Confident Smile Corner Dimples & Creases
+        ctx.strokeStyle = 'rgba(65, 26, 12, 0.55)';
+        ctx.lineWidth = 3.2;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.arc(-mw, -3, 3.5, 0, Math.PI * 2);
-        ctx.arc(mw, -3, 3.5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-mw - 2, -13);
+        ctx.quadraticCurveTo(-mw, -8, -mw + 6, -5);
+        ctx.moveTo(mw + 2, -13);
+        ctx.quadraticCurveTo(mw, -8, mw - 6, -5);
+        ctx.stroke();
     }
 
     /**
@@ -1130,46 +1309,95 @@ export class ProceduralFacePainter {
 
         ctx.save();
 
-        // 1. Soul Patch (neat triangular wedge under lower lip)
+        // 1. Soul Patch (soft triangular wedge under lower lip with micro-strands)
         ctx.fillStyle = this.colors.soulPatch;
         ctx.beginPath();
-        ctx.moveTo(cx - 8, spy - 14);
-        ctx.lineTo(cx + 8, spy - 14);
-        ctx.lineTo(cx + 4, spy + 8);
-        ctx.lineTo(cx - 4, spy + 8);
+        ctx.moveTo(cx - 10, spy - 16);
+        ctx.lineTo(cx + 10, spy - 16);
+        ctx.lineTo(cx + 5, spy + 12);
+        ctx.lineTo(cx - 5, spy + 12);
         ctx.closePath();
         ctx.fill();
 
-        // 2. Goatee (chin patch wrapping authentic chin contour)
-        ctx.translate(cx, gy);
-
-        // Neat rounded chin patch
-        ctx.fillStyle = this.colors.goatee;
-        ctx.beginPath();
-        ctx.ellipse(0, 10, 48, 28, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Organic curly loops & micro-stippling
-        ctx.strokeStyle = this.colors.goateeCurl;
-        ctx.lineWidth = 1.8;
-        const curlyCoords = [
-            [-36, 0], [-20, -4], [0, -5], [20, -4], [36, 0],
-            [-40, 10], [-20, 7], [0, 6], [20, 7], [40, 10],
-            [-32, 20], [-16, 18], [0, 18], [16, 18], [32, 20],
-            [-22, 28], [0, 30], [22, 28]
-        ];
-        for (const [x_c, y_c] of curlyCoords) {
+        // Soul patch vertical micro-strands
+        ctx.strokeStyle = '#0E0603';
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        for (let sx = -7; sx <= 7; sx += 3.5) {
             ctx.beginPath();
-            ctx.arc(x_c, y_c, 3.2, 0, Math.PI * 1.5);
+            ctx.moveTo(cx + sx, spy - 14);
+            ctx.lineTo(cx + sx * 0.6, spy + 9);
             ctx.stroke();
         }
 
+        // 2. Chin Goatee (composed of textured micro-curls hugging chin bevel)
+        ctx.translate(cx, gy);
+
+        // Soft semi-translucent base undertone (lets warm skin breathe through)
+        const baseGrad = ctx.createRadialGradient(0, 16, 12, 0, 16, 62);
+        baseGrad.addColorStop(0, 'rgba(28, 14, 8, 0.70)');
+        baseGrad.addColorStop(0.7, 'rgba(28, 14, 8, 0.45)');
+        baseGrad.addColorStop(1, 'rgba(28, 14, 8, 0.0)');
+        ctx.fillStyle = baseGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 16, 62, 42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Layer 1: Base curly ringlets (deep espresso #120804)
+        ctx.strokeStyle = this.colors.goateeCurl;
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        const curlsLayer1 = [
+            [-44, -2], [-28, -6], [-12, -8], [0, -8], [12, -8], [28, -6], [44, -2],
+            [-50, 8], [-34, 5], [-16, 3], [0, 3], [16, 3], [34, 5], [50, 8],
+            [-48, 18], [-32, 15], [-16, 13], [0, 12], [16, 13], [32, 15], [48, 18],
+            [-42, 28], [-26, 25], [-10, 23], [10, 23], [26, 25], [42, 28],
+            [-30, 36], [-14, 34], [0, 34], [14, 34], [30, 36],
+            [-16, 44], [0, 44], [16, 44]
+        ];
+        for (const [xc, yc] of curlsLayer1) {
+            ctx.beginPath();
+            ctx.arc(xc, yc, 3.8, 0.2, Math.PI * 1.6);
+            ctx.stroke();
+        }
+
+        // Layer 2: Interlocking micro-curls (warm dark brown #28150D)
+        ctx.strokeStyle = '#28150D';
+        ctx.lineWidth = 1.8;
+        const curlsLayer2 = [
+            [-36, 0], [-20, -3], [-5, -4], [9, -3], [25, 0], [36, 2],
+            [-40, 12], [-24, 10], [-8, 7], [9, 7], [25, 10], [40, 12],
+            [-34, 22], [-18, 19], [-2, 17], [14, 18], [30, 21],
+            [-22, 32], [-7, 29], [7, 29], [22, 32],
+            [-9, 39], [7, 39]
+        ];
+        for (const [xc, yc] of curlsLayer2) {
+            ctx.beginPath();
+            ctx.arc(xc, yc, 3.2, Math.PI * 0.8, Math.PI * 2.2);
+            ctx.stroke();
+        }
+
+        // Layer 3: Subtle surface highlight curls (#3E2215)
+        ctx.strokeStyle = '#3E2215';
+        ctx.lineWidth = 1.5;
+        const curlsLayer3 = [
+            [-24, 4], [-10, 2], [5, 2], [18, 4],
+            [-28, 14], [-12, 12], [2, 11], [16, 12], [28, 14],
+            [-18, 24], [-2, 21], [12, 22]
+        ];
+        for (const [xc, yc] of curlsLayer3) {
+            ctx.beginPath();
+            ctx.arc(xc, yc, 2.8, 0.4, Math.PI * 1.7);
+            ctx.stroke();
+        }
+
+        // Layer 4: Organic edge feathering / stipples around the chin perimeter
         ctx.fillStyle = this.colors.goateePebble || '#2C180E';
-        for (let i = 0; i < 35; i++) {
+        for (let i = 0; i < 48; i++) {
             const ang = (i * 2.3999);
-            const rad = Math.sqrt((i + 0.5) / 35);
-            const px = Math.cos(ang) * 40 * rad;
-            const py = 10 + Math.sin(ang) * 22 * rad;
+            const rad = Math.sqrt((i + 0.5) / 48);
+            const px = Math.cos(ang) * 54 * rad;
+            const py = 18 + Math.sin(ang) * 32 * rad;
             ctx.beginPath();
             ctx.arc(px, py, 1.4, 0, Math.PI * 2);
             ctx.fill();
