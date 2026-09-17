@@ -102,6 +102,14 @@ class MascotRegistry:
         return result
 
 
+def get_bundled_assets_dir() -> Optional[Path]:
+    """Resolves the built-in bundled mascot assets directory in the VideoMascot repository/package."""
+    candidate = (Path(__file__).resolve().parent.parent.parent.parent / "assets" / "mascots").resolve()
+    if candidate.is_dir():
+        return candidate
+    return None
+
+
 _DEFAULT_REGISTRY: Optional[MascotRegistry] = None
 
 
@@ -110,8 +118,23 @@ def get_default_registry() -> MascotRegistry:
     global _DEFAULT_REGISTRY
     if _DEFAULT_REGISTRY is None:
         _DEFAULT_REGISTRY = MascotRegistry()
-        # Auto-discover default mascots root if present
-        default_assets = Path("assets/mascots")
-        if default_assets.exists():
-            _DEFAULT_REGISTRY.discover_from_directory(default_assets)
+        # 1. Auto-discover default local mascots root if present in current working directory
+        cwd_assets = Path("assets/mascots").resolve()
+        if cwd_assets.is_dir():
+            _DEFAULT_REGISTRY.discover_from_directory(cwd_assets)
+
+        # 2. Auto-discover bundled package/repository mascots root
+        pkg_assets = get_bundled_assets_dir()
+        if pkg_assets and pkg_assets != cwd_assets and pkg_assets.is_dir():
+            _DEFAULT_REGISTRY.discover_from_directory(pkg_assets)
     return _DEFAULT_REGISTRY
+
+
+def list_available_mascots() -> List[MascotMetadata]:
+    """Returns metadata for all discovered mascot characters in the default registry."""
+    return get_default_registry().list_available_mascots()
+
+
+def list_character_ids() -> List[str]:
+    """Returns list of all registered mascot character IDs in the default registry."""
+    return get_default_registry().list_character_ids()

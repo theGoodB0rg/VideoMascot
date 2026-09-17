@@ -1,7 +1,16 @@
 """VideoMascot - Modular, scalable AI-ready layered puppet and mascot animation engine."""
 
 from videomascot.core.math_2d import Vector2D, Transform2D, ease_in_out_quad, ease_out_back, spring_lerp
-from videomascot.core.registry import MascotRegistry, get_default_registry, MascotMetadata, MascotNotFoundError, MascotBundleValidationError
+from videomascot.core.registry import (
+    MascotRegistry,
+    get_default_registry,
+    get_bundled_assets_dir,
+    list_available_mascots,
+    list_character_ids,
+    MascotMetadata,
+    MascotNotFoundError,
+    MascotBundleValidationError,
+)
 from videomascot.core.bones import Bone, BoneHierarchy, solve_2joint_ik, solve_pointing_fk, solve_aim_to_target
 from videomascot.core.slots import Slot
 from videomascot.models.manifest import MascotManifest, BoneConfig, SlotConfig, PhysicsConfig, JointConstraintConfig
@@ -36,6 +45,9 @@ __all__ = [
     "PoseState",
     "MascotRegistry",
     "get_default_registry",
+    "get_bundled_assets_dir",
+    "list_available_mascots",
+    "list_character_ids",
     "MascotMetadata",
     "MascotNotFoundError",
     "MascotBundleValidationError",

@@ -81,9 +81,28 @@ def create_starter_brick_dev(output_dir: Path) -> Path:
         src_point = Image.open(src_point_path).convert("RGBA").resize((1000, 1000), Image.LANCZOS) if src_point_path else src_rest
 
         # 1. Head Attachments: 3D sculpted heads matching each pose's facial expression
-        head_rest = src_rest.crop((300, 20, 700, 440))
-        head_wave = src_wave.crop((300, 20, 700, 440))
-        head_point = src_point.crop((300, 20, 700, 440))
+        def clean_head_mouth(head_img: Image.Image) -> Image.Image:
+            """Cleans the static smile from the base head so moving viseme decals don't collide or double-overlay."""
+            arr = np.array(head_img)
+            # Interpolate skin gradient between mustache (y=325) and goatee (y=358)
+            top_skin = arr[325, 150:250].astype(float)
+            bot_skin = arr[358, 150:250].astype(float)
+            for y in range(326, 358):
+                alpha = (y - 326) / 32.0
+                arr[y, 150:250] = (1.0 - alpha) * top_skin + alpha * bot_skin
+            res = Image.fromarray(arr)
+            # Soften blending
+            mask = Image.new("L", head_img.size, 0)
+            d = ImageDraw.Draw(mask)
+            d.ellipse([155, 326, 245, 356], fill=255)
+            from PIL import ImageFilter
+            blurred = res.filter(ImageFilter.GaussianBlur(1.5))
+            res.paste(blurred, mask=mask)
+            return res
+
+        head_rest = clean_head_mouth(src_rest.crop((300, 20, 700, 440)))
+        head_wave = clean_head_mouth(src_wave.crop((300, 20, 700, 440)))
+        head_point = clean_head_mouth(src_point.crop((300, 20, 700, 440)))
 
         head_rest.save(bundle_dir / "head" / "head_base.png")
         head_rest.save(bundle_dir / "head" / "head_rest.png")

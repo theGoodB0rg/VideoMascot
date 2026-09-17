@@ -120,3 +120,31 @@ def test_mascot_engine_for_character_integration(tmp_path: Path):
     engine = MascotEngine.for_character("mini_bot", registry=registry)
     assert engine.manifest.id == "mini_bot"
     assert engine.canvas_size == (500, 500)
+
+
+def test_bundled_assets_dir_discovery():
+    from videomascot.core.registry import get_bundled_assets_dir, get_default_registry
+    b_dir = get_bundled_assets_dir()
+    assert b_dir is not None
+    assert b_dir.is_dir()
+    assert (b_dir / "brick_dev").is_dir()
+
+    reg = get_default_registry()
+    char_ids = reg.list_character_ids()
+    assert "brick_dev" in char_ids
+
+
+def test_list_convenience_functions():
+    import videomascot
+    char_ids = videomascot.list_character_ids()
+    assert isinstance(char_ids, list)
+    assert "brick_dev" in char_ids
+    assert "nexus_bot" in char_ids
+    assert "chibi_tech_guide" in char_ids
+
+    mascots = videomascot.list_available_mascots()
+    assert len(mascots) >= 3
+    names = {m.name for m in mascots}
+    assert "Brick Dev" in names
+    assert "Nexus Bot" in names
+    assert "Chibi Tech Guide" in names
