@@ -63,12 +63,10 @@ export class LegoMinifigure {
         this.root.add(this.torso);
 
         // 3. Head & Neck
-        const neckH = this.factory.units.neckHeight;
-        const headH = this.factory.units.headHeight;
         const headData = this.factory.createHeadGeometry();
         this.head = headData.group;
-        // Head sits on neck cylinder
-        this.head.position.set(0, 0.82 + 0.64 + neckH + headH / 2.0, 0); // y = 2.04
+        // Head sits proudly elevated on the 65px neck pedestal (Y = 2.18)
+        this.head.position.set(0, 2.18, 0);
         if (isPbr) {
             const headMain = this.head.getObjectByName('head_main');
             if (headMain) {
@@ -83,13 +81,16 @@ export class LegoMinifigure {
         }
         this.root.add(this.head);
 
-        // 4. Afro Hair
+        // 4. Afro Hair (Part 21778)
         const hairMat = isPbr
             ? this.materialFactory.createHairMaterial()
             : new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.65 });
         const hairData = this.factory.createHairGeometry(hairMat);
         this.hair = hairData.group;
-        this.hair.position.add(this.head.position);
+        this.hair.position.copy(this.head.position);
+        // Hairpiece snaps over head stud, stud is hollowly enclosed
+        const headStud = this.head.getObjectByName('head_stud');
+        if (headStud) headStud.visible = false;
         this.root.add(this.hair);
 
         // Arm materials
@@ -154,14 +155,15 @@ export class LegoMinifigure {
             this.applyMaterial(armGroup, materials.upperArmMat);
             return;
         }
+        // Long-sleeved polo: striped fabric wraps full arm seamlessly down to wrist
         const shoulder = armGroup.getObjectByName('shoulder_pivot');
         if (shoulder) shoulder.material = materials.upperArmMat;
         const upper = armGroup.getObjectByName('upper_arm');
         if (upper) upper.material = materials.upperArmMat;
         const elbow = armGroup.getObjectByName('elbow_joint');
-        if (elbow) elbow.material = materials.forearmMat;
+        if (elbow) elbow.material = materials.upperArmMat;
         const fore = armGroup.getObjectByName('forearm');
-        if (fore) fore.material = materials.forearmMat;
+        if (fore) fore.material = materials.upperArmMat;
     }
 
     applyMaterial(group, material) {

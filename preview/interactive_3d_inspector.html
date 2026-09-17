@@ -395,8 +395,8 @@
         scene.background = new THREE.Color(0x121218);
 
         const camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.1, 50);
-        // Default close-up framing head & upper torso
-        camera.position.set(0, 2.05, 2.6);
+        // Calibrated waist-up & portrait framing centered on head and chest
+        camera.position.set(0, 2.18, 2.6);
 
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
@@ -409,7 +409,7 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.target.set(0, 2.02, 0);
+        controls.target.set(0, 2.18, 0);
 
         // Lighting matching studio concept art
         const ambientLight = new THREE.AmbientLight(0x40352c, 1.2);
@@ -488,16 +488,19 @@
         waist.position.y = 0.18;
         minifigRoot.add(waist);
 
-        // 2. Torso
+        // 2. Torso (trapezoid with rounded shoulder chamfers)
         const shape = new THREE.Shape();
-        shape.moveTo(-0.96, -0.64);
-        shape.lineTo(0.96, -0.64);
-        shape.lineTo(0.72, 0.64);
-        shape.lineTo(-0.72, 0.64);
+        const filletR = 0.06;
+        shape.moveTo(-0.98, -0.64);
+        shape.lineTo(0.98, -0.64);
+        shape.lineTo(0.74 + filletR * 0.35, 0.64 - filletR);
+        shape.quadraticCurveTo(0.74, 0.64, 0.74 - filletR, 0.64);
+        shape.lineTo(-0.74 + filletR, 0.64);
+        shape.quadraticCurveTo(-0.74, 0.64, -0.74 - filletR * 0.35, 0.64 - filletR);
         shape.closePath();
 
         const torsoGeom = new THREE.ExtrudeGeometry(shape, {
-            steps: 1, depth: 0.74, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 4
+            steps: 1, depth: 0.70, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 6
         });
         torsoGeom.center();
         const posAttr = torsoGeom.attributes.position;
@@ -505,7 +508,7 @@
         for (let i = 0; i < posAttr.count; i++) {
             const x = posAttr.getX(i), y = posAttr.getY(i), z = posAttr.getZ(i);
             if (z > 0.25) {
-                const w = 0.96 - ((y + 0.64) / 1.28) * 0.24;
+                const w = 0.98 - ((y + 0.64) / 1.28) * 0.24;
                 uvAttr.setXY(i, Math.max(0, Math.min(1, (x + w) / (2.0 * w))), Math.max(0, Math.min(1, (y + 0.64) / 1.28)));
             }
         }
@@ -514,8 +517,8 @@
         torso.position.y = 0.82;
         minifigRoot.add(torso);
 
-        // Clean Neck Cylinder (zero brown skin on shirt)
-        const neckH = 0.06, neckR = 0.24;
+        // Elevated Neck Pedestal (65px pedestal visible between collar and chin)
+        const neckH = 0.20, neckR = 0.24;
         const neck = new THREE.Mesh(new THREE.CylinderGeometry(neckR, neckR, neckH, 32), pbrSkinMat);
         neck.position.y = 0.82 + 0.64 + neckH / 2.0;
         minifigRoot.add(neck);
@@ -523,19 +526,27 @@
         // Head Group (for rotation)
         const headH = 1.06, headR = 0.52;
         const headGroup = new THREE.Group();
-        headGroup.position.set(0, 0.82 + 0.64 + neckH + headH / 2.0, 0); // 2.04
+        headGroup.position.set(0, 2.18, 0); // Authentically elevated to reveal neck pedestal
         minifigRoot.add(headGroup);
 
         const headPoints = [];
-        const bR = 0.08;
+        const bR = 0.10;
         headPoints.push(new THREE.Vector2(0.24, -headH/2));
-        for (let i = 0; i <= 6; i++) {
-            const a = (Math.PI/2) * (1 - i/6);
+        // Bottom chin bevel
+        for (let i = 0; i <= 8; i++) {
+            const a = (Math.PI/2) * (1 - i/8);
             headPoints.push(new THREE.Vector2(headR - bR + Math.cos(a)*bR, -headH/2 + bR - Math.sin(a)*bR));
         }
-        headPoints.push(new THREE.Vector2(headR, headH/2 - bR));
-        for (let i = 0; i <= 6; i++) {
-            const a = (Math.PI/2) * (i/6);
+        // Organic cheek bulge
+        for (let i = 1; i < 10; i++) {
+            const frac = i / 10;
+            const py = (-headH/2 + bR) + frac * (headH - 2*bR);
+            const cheekFactor = Math.exp(-Math.pow((py - (-0.06)) / 0.30, 2));
+            headPoints.push(new THREE.Vector2(headR * (1.0 + 0.015 * cheekFactor), py));
+        }
+        // Top bevel
+        for (let i = 0; i <= 8; i++) {
+            const a = (Math.PI/2) * (i/8);
             headPoints.push(new THREE.Vector2(headR - bR + Math.cos(a)*bR, headH/2 - bR + Math.sin(a)*bR));
         }
         headPoints.push(new THREE.Vector2(0.24, headH/2));
@@ -557,7 +568,7 @@
         stud.position.y = headH/2 + 0.08;
         headGroup.add(stud);
 
-        // Calibrated Molded Lego Afro Hair Piece (Part 21778 - Snug Dome + Micro-Curls)
+        // Calibrated Molded Lego Afro Hair Piece (Part 21778 - Snug Dome + 1,200 Micro-Pebbles in Fibonacci distribution)
         function createLegoAfroHair() {
             const group = new THREE.Group();
             group.name = 'afro_hair';
@@ -566,20 +577,23 @@
             const geom = new THREE.BufferGeometry();
             const positions = [], uvs = [], indices = [];
 
+            const capRadius = 0.535;
+            const yTop = 0.68;
+            const capCenterY = 0.22;
+            const capH = yTop - capCenterY;
+
             function getBottomY(theta) {
                 const zNorm = -Math.cos(theta);
-                const xVal = 0.545 * Math.sin(theta);
+                const xVal = capRadius * Math.sin(theta);
                 if (zNorm < -0.1) return -0.12;
                 if (zNorm < 0.35) {
                     const t = (zNorm - (-0.1)) / 0.45;
-                    return -0.12 + 0.10 * t;
+                    return -0.12 + 0.20 * t;
                 }
-                const yForehead = 0.29 - 0.40 * (xVal * xVal);
+                const yForehead = 0.38 - 1.25 * (xVal * xVal);
                 const t = Math.min(1.0, (zNorm - 0.35) / 0.35);
-                return -0.02 * (1.0 - t) + yForehead * t;
+                return 0.08 * (1.0 - t) + yForehead * t;
             }
-
-            const yTop = 0.75, capCenterY = 0.26, capH = yTop - capCenterY;
 
             for (let j = 0; j <= nY; j++) {
                 const vFrac = j / nY;
@@ -595,9 +609,9 @@
                         let r;
                         if (y >= capCenterY) {
                             const relY = (y - capCenterY) / capH;
-                            r = 0.548 * Math.sqrt(Math.max(0, 1.0 - relY * relY));
+                            r = capRadius * Math.sqrt(Math.max(0, 1.0 - relY * relY));
                         } else {
-                            r = 0.548;
+                            r = capRadius;
                         }
                         px = r * Math.sin(theta);
                         pz = -r * Math.cos(theta);
@@ -626,45 +640,60 @@
             capMesh.castShadow = true;
             group.add(capMesh);
 
-            const curlGeom = new THREE.SphereGeometry(0.034, 8, 6);
-            const curlCount = 900;
+            // 1,200 micro-pebbles in Fibonacci distribution
+            const curlGeom = new THREE.SphereGeometry(0.022, 6, 6);
+            const curlCount = 1200;
             const curls = new THREE.InstancedMesh(curlGeom, pbrHairMat, curlCount);
             curls.castShadow = true;
 
             const dummy = new THREE.Object3D();
             let cIdx = 0;
-            for (let i = 0; i < 850; i++) {
-                const phi = Math.acos(1.0 - 0.95 * ((i + 0.5) / 850));
-                const theta = Math.sqrt(850 * Math.PI) * phi;
-                const yBot = getBottomY(theta);
-                const relY = Math.cos(phi);
-                const y = capCenterY + capH * relY;
-                if (y < yBot + 0.015) continue;
-                const r = 0.552 * Math.sin(phi);
-                const px = r * Math.sin(theta);
-                const pz = -r * Math.cos(theta);
-                dummy.position.set(px, y, pz);
-                dummy.scale.set(1.0, 1.0, 1.0);
+            const goldenAngle = Math.PI * (3.0 - Math.sqrt(5));
+            const totalSamples = 1400;
+
+            for (let i = 0; i < totalSamples && cIdx < curlCount; i++) {
+                const u = (i + 0.5) / totalSamples;
+                const theta = goldenAngle * i;
+                const normTheta = Math.atan2(Math.sin(theta), Math.cos(theta));
+                const yBot = getBottomY(normTheta);
+                const v = Math.sqrt(u);
+                const py = yTop - v * (yTop - yBot);
+
+                const relY = py >= capCenterY ? (py - capCenterY) / capH : 0.0;
+                const rBase = py >= capCenterY ? capRadius * Math.sqrt(Math.max(0, 1.0 - relY * relY)) : capRadius;
+                const r = rBase + 0.004;
+                const px = r * Math.sin(normTheta);
+                const pz = -r * Math.cos(normTheta);
+
+                dummy.position.set(px, py, pz);
+                const s = 0.90 + ((i * 7) % 5) * 0.05;
+                dummy.scale.set(s, s, s);
                 dummy.updateMatrix();
                 curls.setMatrixAt(cIdx++, dummy.matrix);
             }
 
-            const rimSteps = 36;
-            for (let i = 0; i <= rimSteps; i++) {
+            const rimSteps = 40;
+            for (let i = 0; i <= rimSteps && cIdx < curlCount; i++) {
                 const t = -1.0 + (2.0 * i) / rimSteps;
-                const theta = Math.PI * (1.0 - 0.42 * t);
+                const theta = Math.PI * (1.0 - 0.40 * t);
                 const yBot = getBottomY(theta);
-                const r = 0.554;
+                const r = capRadius + 0.005;
                 const px = r * Math.sin(theta);
                 const pz = -r * Math.cos(theta);
-                if (cIdx < curlCount) {
-                    dummy.position.set(px, yBot - 0.008, pz);
-                    dummy.scale.set(1.12, 1.12, 1.12);
-                    dummy.updateMatrix();
-                    curls.setMatrixAt(cIdx++, dummy.matrix);
-                }
+
+                dummy.position.set(px, yBot + 0.002, pz);
+                dummy.scale.set(1.05, 1.05, 1.05);
+                dummy.updateMatrix();
+                curls.setMatrixAt(cIdx++, dummy.matrix);
             }
-            curls.count = cIdx;
+
+            while (cIdx < curlCount) {
+                dummy.position.set(0, yTop, 0);
+                dummy.scale.set(0.001, 0.001, 0.001);
+                dummy.updateMatrix();
+                curls.setMatrixAt(cIdx++, dummy.matrix);
+            }
+
             curls.instanceMatrix.needsUpdate = true;
             group.add(curls);
 

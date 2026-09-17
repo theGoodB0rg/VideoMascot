@@ -13,7 +13,7 @@ export class LegoGeometryFactory {
             studDiameter: 0.48,
             studHeight: 0.16,
             neckDiameter: 0.48,
-            neckHeight: 0.05,
+            neckHeight: 0.20,
             torsoTopWidth: 1.48,
             torsoBottomWidth: 1.96,
             torsoHeight: 1.28,
@@ -31,6 +31,7 @@ export class LegoGeometryFactory {
 
     /**
      * Creates the Lego Minifigure head cylinder with rounded top/bottom bevels, stud, and cylindrical UVs.
+     * Incorporates subtle organic lower-cheek bulge (+1.5%) tapering gently to temples.
      */
     createHeadGeometry() {
         const group = new THREE.Group();
@@ -38,18 +39,33 @@ export class LegoGeometryFactory {
 
         const r = this.units.headDiameter / 2.0; // 0.52
         const h = this.units.headHeight;        // 1.06
-        const bevelR = 0.08;
-        const bevelSegments = 6;
+        const bevelR = 0.10;
+        const bevelSegments = 8;
 
         const points = [];
         points.push(new THREE.Vector2(0.24, -h / 2));
+        
+        // Bottom chin/jaw bevel
         for (let i = 0; i <= bevelSegments; i++) {
             const angle = (Math.PI / 2) * (1 - i / bevelSegments);
             const px = r - bevelR + Math.cos(angle) * bevelR;
             const py = -h / 2 + bevelR - Math.sin(angle) * bevelR;
             points.push(new THREE.Vector2(px, py));
         }
-        points.push(new THREE.Vector2(r, h / 2 - bevelR));
+
+        // Mid-face profile with organic lower-cheek bulge (+1.5%) tapering to temples
+        const cheekSteps = 10;
+        const yStart = -h / 2 + bevelR;
+        const yEnd = h / 2 - bevelR;
+        for (let i = 1; i < cheekSteps; i++) {
+            const frac = i / cheekSteps;
+            const py = yStart + frac * (yEnd - yStart);
+            const cheekFactor = Math.exp(-Math.pow((py - (-0.06)) / 0.30, 2));
+            const currentR = r * (1.0 + 0.015 * cheekFactor);
+            points.push(new THREE.Vector2(currentR, py));
+        }
+
+        // Top cranium bevel
         for (let i = 0; i <= bevelSegments; i++) {
             const angle = (Math.PI / 2) * (i / bevelSegments);
             const px = r - bevelR + Math.cos(angle) * bevelR;
@@ -92,16 +108,18 @@ export class LegoGeometryFactory {
     }
 
     /**
-     * Creates the authentic molded Lego afro hair piece with open face cutout,
-     * wide side lobes covering temples/ears, back neck drape, and tightly packed afro curls.
+     * Creates the authentic molded Lego afro hair piece (Part 21778):
+     * Low-profile cranial helmet hugging cranium (R=0.535, H=0.68),
+     * high parabolic hairline arch leaving 75px open forehead,
+     * and 1,200 micro-pebbles (R=0.022) in Fibonacci surface distribution.
      */
     createHairGeometry(material = null) {
         const group = new THREE.Group();
         group.name = 'hair_assembly';
 
         const hairMat = material || new THREE.MeshStandardMaterial({
-            color: 0x161413,
-            roughness: 0.82,
+            color: 0x181615,
+            roughness: 0.78,
             metalness: 0.02
         });
 
@@ -113,26 +131,27 @@ export class LegoGeometryFactory {
         const uvs = [];
         const indices = [];
 
+        const capRadius = 0.548;
+        const yTop = 0.78;
+        const capCenterY = 0.26;
+        const capH = yTop - capCenterY; // 0.52
+
         function getBottomY(theta) {
             const zNorm = -Math.cos(theta); // -1 at back, +1 at front
-            const xVal = 0.545 * Math.sin(theta);
+            const xVal = capRadius * Math.sin(theta);
 
             if (zNorm < -0.1) {
                 return -0.12; // Back of head covers down towards neck
             } else if (zNorm < 0.35) {
                 const t = (zNorm - (-0.1)) / 0.45;
-                return -0.12 + 0.10 * t; // Sides over ears
+                return -0.12 + 0.16 * t; // Sides over temples/ears: -0.12 to 0.04
             } else {
-                // Front forehead: gentle, rounded parabolic arch
-                const yForehead = 0.29 - 0.40 * (xVal * xVal);
+                // Front forehead: high parabolic arch leaving authentic 75px open forehead above eyebrows
+                const yForehead = 0.20 - 0.48 * (xVal * xVal);
                 const t = Math.min(1.0, (zNorm - 0.35) / 0.35);
-                return -0.02 * (1.0 - t) + yForehead * t;
+                return 0.04 * (1.0 - t) + yForehead * t;
             }
         }
-
-        const yTop = 0.75;
-        const capCenterY = 0.26;
-        const capH = yTop - capCenterY; // 0.49
 
         // Generate grid of vertices with sealed top pole
         for (let j = 0; j <= nY; j++) {
@@ -149,9 +168,9 @@ export class LegoGeometryFactory {
                     let r;
                     if (y >= capCenterY) {
                         const relY = (y - capCenterY) / capH;
-                        r = 0.548 * Math.sqrt(Math.max(0, 1.0 - relY * relY));
+                        r = capRadius * Math.sqrt(Math.max(0, 1.0 - relY * relY));
                     } else {
-                        r = 0.548;
+                        r = capRadius;
                     }
                     px = r * Math.sin(theta);
                     pz = -r * Math.cos(theta);
@@ -182,52 +201,57 @@ export class LegoGeometryFactory {
         capMesh.material.side = THREE.DoubleSide;
         group.add(capMesh);
 
-        // 2. Tightly packed micro-curls across outer surface (Lego Part 21778)
-        const curlGeom = new THREE.SphereGeometry(0.034, 8, 8);
-        const curlCount = 850;
+        // 2. 1,400 micro-pebbles (R=0.022) in Fibonacci surface distribution (Part 21778)
+        const curlGeom = new THREE.SphereGeometry(0.022, 8, 8);
+        const curlCount = 1400;
         const curls = new THREE.InstancedMesh(curlGeom, hairMat, curlCount);
         const dummy = new THREE.Object3D();
 
-        const phi = Math.PI * (Math.sqrt(5) - 1);
+        const goldenAngle = Math.PI * (3.0 - Math.sqrt(5)); // ~2.3999 rad
         let cIdx = 0;
-        for (let i = 0; i < 1300; i++) {
-            const u = i / 1299.0;
-            const theta = phi * i;
+        const totalSamples = 1600;
+
+        for (let i = 0; i < totalSamples && cIdx < curlCount; i++) {
+            const u = (i + 0.5) / totalSamples;
+            const theta = goldenAngle * i;
             const normTheta = Math.atan2(Math.sin(theta), Math.cos(theta));
             const yBot = getBottomY(normTheta);
             const v = Math.sqrt(u);
             const py = yTop - v * (yTop - yBot);
 
             const relY = py >= capCenterY ? (py - capCenterY) / capH : 0.0;
-            const r = py >= capCenterY ? 0.552 * Math.sqrt(Math.max(0, 1.0 - relY * relY)) : 0.552;
+            const rBase = py >= capCenterY ? capRadius * Math.sqrt(Math.max(0, 1.0 - relY * relY)) : capRadius;
+            const r = rBase + 0.003;
             const px = r * Math.sin(normTheta);
             const pz = -r * Math.cos(normTheta);
 
-            if (cIdx < curlCount) {
-                dummy.position.set(px, py, pz);
-                const s = 0.88 + (i % 4) * 0.08;
-                dummy.scale.set(s, s, s);
-                dummy.updateMatrix();
-                curls.setMatrixAt(cIdx++, dummy.matrix);
-            }
+            dummy.position.set(px, py, pz);
+            const s = 0.92 + ((i * 7) % 5) * 0.04;
+            dummy.scale.set(s, s, s);
+            dummy.updateMatrix();
+            curls.setMatrixAt(cIdx++, dummy.matrix);
         }
 
-        // Hairline rim curls right along the forehead arch (scalloped afro hairline)
-        const rimSteps = 36;
-        for (let i = 0; i <= rimSteps; i++) {
+        // Hairline rim curls right along the forehead arch (organic scalloped afro hairline)
+        const rimSteps = 42;
+        for (let i = 0; i <= rimSteps && cIdx < curlCount; i++) {
             const t = -1.0 + (2.0 * i) / rimSteps;
-            const theta = Math.PI * (1.0 - 0.42 * t);
+            const theta = Math.PI * (1.0 - 0.40 * t);
             const yBot = getBottomY(theta);
-            const r = 0.554;
+            const r = capRadius + 0.004;
             const px = r * Math.sin(theta);
             const pz = -r * Math.cos(theta);
 
-            if (cIdx < curlCount) {
-                dummy.position.set(px, yBot - 0.008, pz);
-                dummy.scale.set(1.12, 1.12, 1.12);
-                dummy.updateMatrix();
-                curls.setMatrixAt(cIdx++, dummy.matrix);
-            }
+            dummy.position.set(px, yBot + 0.002, pz);
+            dummy.scale.set(1.05, 1.05, 1.05);
+            dummy.updateMatrix();
+            curls.setMatrixAt(cIdx++, dummy.matrix);
+        }
+        while (cIdx < curlCount) {
+            dummy.position.set(0, yTop, 0);
+            dummy.scale.set(0.001, 0.001, 0.001);
+            dummy.updateMatrix();
+            curls.setMatrixAt(cIdx++, dummy.matrix);
         }
 
         curls.instanceMatrix.needsUpdate = true;
@@ -237,7 +261,7 @@ export class LegoGeometryFactory {
     }
 
     /**
-     * Creates the classic trapezoidal Lego torso with 10° sloped sides and rounded shoulder bevels.
+     * Creates the classic trapezoidal Lego torso with rounded shoulder chamfers (0.06 fillet).
      */
     createTorsoGeometry() {
         const group = new THREE.Group();
@@ -248,33 +272,48 @@ export class LegoGeometryFactory {
         const h = this.units.torsoHeight;            // 1.28
         const d = this.units.torsoDepth;             // 0.82
 
-        // Create 2D trapezoid shape in XY plane
+        // Create 2D trapezoid shape with rounded shoulder fillets
         const shape = new THREE.Shape();
         const halfTop = topW / 2.0;
         const halfBot = botW / 2.0;
         const halfH = h / 2.0;
+        const filletR = 0.06;
 
         shape.moveTo(-halfBot, -halfH);
         shape.lineTo(halfBot, -halfH);
-        shape.lineTo(halfTop, halfH);
-        shape.lineTo(-halfTop, halfH);
+        shape.lineTo(halfTop + filletR * 0.35, halfH - filletR);
+        shape.quadraticCurveTo(halfTop, halfH, halfTop - filletR, halfH);
+        shape.lineTo(-halfTop + filletR, halfH);
+        shape.quadraticCurveTo(-halfTop, halfH, -halfTop - filletR * 0.35, halfH - filletR);
         shape.closePath();
 
-        // Extrude with slight bevel
+        // Extrude with 0.06 bevel radius and 6 segments
         const extrudeSettings = {
             steps: 1,
-            depth: d - 0.08,
+            depth: d - 0.12,
             bevelEnabled: true,
-            bevelThickness: 0.04,
-            bevelSize: 0.04,
-            bevelSegments: 4,
+            bevelThickness: 0.06,
+            bevelSize: 0.06,
+            bevelSegments: 6,
         };
 
         const torsoGeom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
         torsoGeom.center(); // Center at (0, 0, 0)
+
+        // Calibrated front trapezoid UV mapping: maps polo stripes across the sloped torso front
+        const posAttr = torsoGeom.attributes.position;
+        const uvAttr = torsoGeom.attributes.uv;
+        for (let i = 0; i < posAttr.count; i++) {
+            const x = posAttr.getX(i), y = posAttr.getY(i), z = posAttr.getZ(i);
+            if (z > 0.15) {
+                const w = halfBot - ((y + halfH) / h) * (halfBot - halfTop);
+                uvAttr.setXY(i, Math.max(0, Math.min(1, (x + w) / (2.0 * w))), Math.max(0, Math.min(1, (y + halfH) / h)));
+            }
+        }
+        uvAttr.needsUpdate = true;
         torsoGeom.computeVertexNormals();
 
-        // Neck stud on top of torso
+        // Neck pedestal on top of torso (elevated to reveal 65px neck pedestal)
         const neckR = this.units.neckDiameter / 2.0;
         const neckH = this.units.neckHeight;
         const neckGeom = new THREE.CylinderGeometry(neckR, neckR, neckH, 32);

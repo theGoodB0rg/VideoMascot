@@ -96,7 +96,7 @@ export class LegoMaterialFactory {
             sleeveTexture.colorSpace = THREE.SRGBColorSpace;
             sleeveTexture.wrapS = THREE.RepeatWrapping;
             sleeveTexture.wrapT = THREE.RepeatWrapping;
-            sleeveTexture.repeat.set(1, 2);
+            sleeveTexture.repeat.set(1, 1);
         }
         if (forearmTexture) {
             forearmTexture.colorSpace = THREE.SRGBColorSpace;
