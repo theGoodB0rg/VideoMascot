@@ -75,7 +75,8 @@ class MascotEngine:
         self,
         action: Optional[MascotActionSchema] = None,
         vtt_path: Optional[Union[str, Path]] = None,
-        speech_cues: Optional[List[SpeechCue]] = None
+        speech_cues: Optional[List[SpeechCue]] = None,
+        time_offset: float = 0.0,
     ) -> MascotSequencer:
         """Constructs a configured MascotSequencer."""
         act = action or MascotActionSchema()
@@ -88,7 +89,8 @@ class MascotEngine:
         elif vtt_path and Path(vtt_path).exists():
             lipsync = LipSyncEngine.from_vtt_file(
                 vtt_path=vtt_path,
-                default_resting_viseme=MascotSequencer._get_resting_viseme_for_emotion(act.emotion)
+                default_resting_viseme=MascotSequencer._get_resting_viseme_for_emotion(act.emotion),
+                time_offset=time_offset,
             )
         elif act.speech_cues:
             lipsync = LipSyncEngine(
@@ -112,12 +114,16 @@ class MascotEngine:
         fps: int = 24,
         vtt_path: Optional[Union[str, Path]] = None,
         speech_cues: Optional[List[SpeechCue]] = None,
-        target_size: Optional[Tuple[int, int]] = None
+        target_size: Optional[Tuple[int, int]] = None,
+        time_offset: float = 0.0,
+        on_frame: Optional[Any] = None,
     ) -> Iterator[bytes]:
         """Streams raw uncompressed RGBA bytes for a scene duration."""
-        seq = self.create_sequencer(action=action, vtt_path=vtt_path, speech_cues=speech_cues)
+        act = action.model_copy() if hasattr(action, "model_copy") else action
+        setattr(act, "duration", duration)
+        seq = self.create_sequencer(action=act, vtt_path=vtt_path, speech_cues=speech_cues, time_offset=time_offset)
         streamer = StreamEngine(compositor=self.compositor, sequencer=seq)
-        return streamer.iter_rgba_bytes(duration=duration, fps=fps, target_size=target_size)
+        return streamer.iter_rgba_bytes(duration=duration, fps=fps, target_size=target_size, on_frame=on_frame)
 
     def stream_from_scene_dict(
         self,

@@ -47,15 +47,68 @@ class LipSyncEngine:
         self.cues: List[SpeechCue] = sorted(cues or [], key=lambda c: c.start)
         self.default_resting_viseme = default_resting_viseme
 
+    VOWEL_PATTERNS = [
+        (re.compile(r"(oo|ou|ew|ue|u)", re.I), "U"),
+        (re.compile(r"(oa|ow|oh|aw|au|o)", re.I), "O"),
+        (re.compile(r"(ee|ea|ey|e)", re.I), "E"),
+        (re.compile(r"(ai|ay|igh|a|i|y)", re.I), "A_I"),
+    ]
+
+    @classmethod
+    def _extract_word_visemes(cls, word: str, duration: float) -> List[str]:
+        """Extracts dominant syllabic vowel visemes with readable holds (>= 180ms).
+        
+        Conversational words (< 0.38s) hold exactly 1 dominant vowel viseme,
+        eliminating sub-word consonant flickering. Long multi-syllabic words hold
+        at most 2-3 visemes.
+        """
+        clean = re.sub(r"[^a-zA-Z]", "", word).lower()
+        if not clean:
+            return ["A_I"]
+
+        # 1. Extract vowel nuclei in order of appearance
+        vowel_matches = []
+        for pat, viseme in cls.VOWEL_PATTERNS:
+            for m in pat.finditer(clean):
+                vowel_matches.append((m.start(), viseme))
+
+        vowel_matches.sort(key=lambda x: x[0])
+        filtered_vowels = []
+        last_pos = -2
+        for pos, v in vowel_matches:
+            if pos > last_pos + 1:
+                filtered_vowels.append(v)
+                last_pos = pos
+
+        if not filtered_vowels:
+            filtered_vowels = ["A_I"]
+
+        # 2. Deduplicate consecutive identical visemes
+        deduped: List[str] = []
+        for s in filtered_vowels:
+            if not deduped or deduped[-1] != s:
+                deduped.append(s)
+
+        # 3. Budget by duration (minimum 180ms per viseme):
+        # - Typical conversational words (< 0.38s): exactly 1 dominant vowel viseme
+        # - Bisyllabic words (0.38s to 0.70s): at most 2 visemes
+        # - Polysyllabic words (> 0.70s): at most 3 visemes
+        if duration < 0.38:
+            return [deduped[0]]
+        elif duration <= 0.70:
+            return deduped[:2]
+        else:
+            return deduped[:3]
+
     @classmethod
     def from_vtt_content(
         cls,
         vtt_text: str,
-        default_resting_viseme: str = "smile"
+        default_resting_viseme: str = "smile",
+        time_offset: float = 0.0,
     ) -> LipSyncEngine:
-        """Parses WebVTT subtitle text and synthesizes timed speech cues."""
+        """Parses WebVTT subtitle text, synthesizes timed speech cues, and bridges coarticulation."""
         cues: List[SpeechCue] = []
-        # Match lines like: 00:00:01.200 --> 00:00:03.450 or 00:01.200 --> 00:03.450
         time_pattern = re.compile(r"((?:\d{2}:)?\d{2}:\d{2}\.\d{3})\s*-->\s*((?:\d{2}:)?\d{2}:\d{2}\.\d{3})")
         lines = vtt_text.splitlines()
         
@@ -64,37 +117,50 @@ class LipSyncEngine:
             line = lines[i].strip()
             match = time_pattern.search(line)
             if match:
-                start_sec = parse_vtt_timestamp(match.group(1))
-                end_sec = parse_vtt_timestamp(match.group(2))
+                raw_start = parse_vtt_timestamp(match.group(1))
+                raw_end = parse_vtt_timestamp(match.group(2))
+                
+                start_sec = raw_start - time_offset
+                end_sec = raw_end - time_offset
                 
                 # Next non-empty lines are subtitle text
                 text_lines = []
                 i += 1
                 while i < len(lines) and lines[i].strip() and not time_pattern.search(lines[i]):
-                    # Strip WebVTT formatting tags like <c> or <v>
                     clean = re.sub(r"<[^>]+>", "", lines[i].strip())
                     text_lines.append(clean)
                     i += 1
                     
                 full_text = " ".join(text_lines)
-                if full_text and end_sec > start_sec:
-                    cues.extend(cls._synthesize_cues_from_text(start_sec, end_sec, full_text))
+                if full_text and end_sec > 0 and end_sec > start_sec:
+                    cues.extend(cls._synthesize_cues_from_text(max(0.0, start_sec), end_sec, full_text))
                 continue
             i += 1
 
-        return cls(cues=cues, default_resting_viseme=default_resting_viseme)
+        # Coarticulation bridging: bridge micro-gaps < 180ms between spoken words in continuous speech
+        bridged_cues: List[SpeechCue] = []
+        for cue in cues:
+            if bridged_cues:
+                prev_cue = bridged_cues[-1]
+                gap = cue.start - prev_cue.end
+                if 0.0 < gap < 0.18:
+                    prev_cue.end = cue.start
+            bridged_cues.append(cue)
+
+        return cls(cues=bridged_cues, default_resting_viseme=default_resting_viseme)
 
     @classmethod
     def from_vtt_file(
         cls,
         vtt_path: Union[str, Path],
-        default_resting_viseme: str = "smile"
+        default_resting_viseme: str = "smile",
+        time_offset: float = 0.0,
     ) -> LipSyncEngine:
         path = Path(vtt_path)
         if not path.exists():
             return cls(cues=[], default_resting_viseme=default_resting_viseme)
         content = path.read_text(encoding="utf-8")
-        return cls.from_vtt_content(content, default_resting_viseme=default_resting_viseme)
+        return cls.from_vtt_content(content, default_resting_viseme=default_resting_viseme, time_offset=time_offset)
 
     @classmethod
     def _synthesize_cues_from_text(
@@ -112,27 +178,17 @@ class LipSyncEngine:
         time_per_word = dur / len(words)
         cues = []
         
-        # Standard dynamic speaking viseme sequence
-        speech_cycle = ["A_I", "E", "L_D_T_N", "O", "M_B_P", "U"]
-        
         for w_idx, word in enumerate(words):
             w_start = start_t + w_idx * time_per_word
             w_end = w_start + time_per_word
-            clean_word = re.sub(r"[^a-zA-Z]", "", word.lower())
+            word_dur = w_end - w_start
             
+            clean_word = re.sub(r"[^a-zA-Z]", "", word.lower())
             if not clean_word:
                 continue
                 
-            # Syllables or character-driven viseme timing (~100-140ms per shape)
-            visemes_for_word = []
-            for ch in clean_word:
-                if ch in PHONEME_MAP:
-                    visemes_for_word.append(PHONEME_MAP[ch])
-            
-            if not visemes_for_word:
-                visemes_for_word = [speech_cycle[w_idx % len(speech_cycle)]]
-                
-            step = (w_end - w_start) / len(visemes_for_word)
+            visemes_for_word = cls._extract_word_visemes(word, word_dur)
+            step = word_dur / len(visemes_for_word)
             for v_idx, v_shape in enumerate(visemes_for_word):
                 c_s = w_start + v_idx * step
                 c_e = c_s + step

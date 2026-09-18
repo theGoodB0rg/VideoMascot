@@ -112,6 +112,9 @@ class MascotActionSchema(BaseModel):
     prop: Optional[str] = Field(default=None, description="Optional attached prop (e.g. 'pointer_stick')")
     procedural: MascotProceduralConfig = Field(default_factory=MascotProceduralConfig)
     speech_cues: List[SpeechCue] = Field(default_factory=list, description="Explicit phoneme / viseme timing cues")
+    transition_in: bool = Field(default=False, description="Whether to slide in from bottom on start")
+    transition_out: bool = Field(default=False, description="Whether to slide out downwards on exit")
+    duration: Optional[float] = Field(default=None, description="Clip duration in seconds for timing transitions")
 
 
 class MascotStoryConfig(BaseModel):

@@ -22,7 +22,8 @@ class StreamEngine:
         self,
         duration: float,
         fps: int = 24,
-        target_size: Optional[Tuple[int, int]] = None
+        target_size: Optional[Tuple[int, int]] = None,
+        on_frame: Optional[Any] = None,
     ) -> Iterator[Image.Image]:
         """Yields PIL RGBA Image instances frame-by-frame."""
         num_frames = max(1, int(round(duration * fps)))
@@ -31,6 +32,8 @@ class StreamEngine:
         for frame_idx in range(num_frames):
             t = frame_idx * dt
             pose = self.sequencer.evaluate_pose(t)
+            if on_frame is not None:
+                on_frame(frame_idx, t, pose)
             frame = self.compositor.render_frame(pose, target_size=target_size)
             yield frame
 
@@ -38,18 +41,20 @@ class StreamEngine:
         self,
         duration: float,
         fps: int = 24,
-        target_size: Optional[Tuple[int, int]] = None
+        target_size: Optional[Tuple[int, int]] = None,
+        on_frame: Optional[Any] = None,
     ) -> Iterator[bytes]:
         """Yields uncompressed raw RGBA bytes directly for FFmpeg stdin piping."""
-        for frame in self.iter_pil_frames(duration=duration, fps=fps, target_size=target_size):
+        for frame in self.iter_pil_frames(duration=duration, fps=fps, target_size=target_size, on_frame=on_frame):
             yield frame.tobytes("raw", "RGBA")
 
     def iter_numpy_frames(
         self,
         duration: float,
         fps: int = 24,
-        target_size: Optional[Tuple[int, int]] = None
+        target_size: Optional[Tuple[int, int]] = None,
+        on_frame: Optional[Any] = None,
     ) -> Iterator[np.ndarray]:
         """Yields uint8 NumPy arrays (H, W, 4) frame-by-frame."""
-        for frame in self.iter_pil_frames(duration=duration, fps=fps, target_size=target_size):
+        for frame in self.iter_pil_frames(duration=duration, fps=fps, target_size=target_size, on_frame=on_frame):
             yield np.array(frame)

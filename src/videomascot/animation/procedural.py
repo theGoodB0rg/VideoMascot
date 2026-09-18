@@ -69,7 +69,9 @@ class BoneSpringSimulator:
                 self._last_parent_rotations[parent_name] = parent_rot
 
             # Rotational inertia: child springs against parent acceleration/velocity
-            target_offset = b_cfg.physics.resting_offset_deg - 0.06 * parent_vel
+            # Dampen head bone coupling to prevent erratic side-to-side wagging during speech
+            coupling = 0.015 if b_name == "head" else 0.06
+            target_offset = b_cfg.physics.resting_offset_deg - coupling * parent_vel
             simulated_offset = spring.update(target_offset, dt)
 
             current_rot = pose.joint_rotations.get(b_name, 0.0)
@@ -162,11 +164,28 @@ class ProceduralLifeEngine:
             return (0.0, 0.0)
         freq = self.config.hover_bpm / 60.0
         phase = 2.0 * math.pi * freq * t
-        amp = self.config.hover_amplitude
+        amp = min(3.2, self.config.hover_amplitude)
         # Multi-harmonic floating bob
         dy = amp * (math.sin(phase) + 0.3 * math.sin(2.3 * phase + 0.8))
-        rot = 1.4 * math.sin(0.8 * phase + 0.4)
+        rot = 0.30 * math.sin(0.8 * phase + 0.4)
         return (dy, rot)
+
+    def get_emphasis_nod_offset(self, t: float, is_speaking: bool) -> Tuple[float, float]:
+        """Subtle periodic conversational emphasis nod.
+        
+        Rather than continuous 2 Hz bounce, fires a brief 0.35s nod every ~4.5s
+        during active speech, remaining completely still for the rest of dialogue.
+        Returns (nod_dy, nod_pitch_rot_deg).
+        """
+        if not is_speaking or not self.config.bounce_on_speak:
+            return (0.0, 0.0)
+        cycle_t = t % 4.5
+        nod_dur = 0.35
+        if cycle_t < nod_dur:
+            # Smooth bell curve / Hann window: 0 -> 1 -> 0
+            w = 0.5 * (1.0 - math.cos(2.0 * math.pi * (cycle_t / nod_dur)))
+            return (-0.5 * w, 0.6 * w)
+        return (0.0, 0.0)
 
     def apply(self, pose: PoseState, t: float, is_speaking: bool = False) -> PoseState:
         """Applies procedural life transformations to a PoseState at time t."""
@@ -185,11 +204,14 @@ class ProceduralLifeEngine:
             curr_dx, curr_dy = pose.joint_translations.get("head", (0.0, 0.0))
             pose.set_joint_translation("head", curr_dx, curr_dy + head_dy)
         
-        # 2. Speaking micro-bounce
+        # 2. Speaking conversational emphasis nod (periodic subtle accent, not continuous)
         if is_speaking and self.config.bounce_on_speak:
-            speak_bounce = 1.8 * abs(math.sin(10.0 * t))
-            h_dx, h_dy = pose.joint_translations.get("head", (0.0, 0.0))
-            pose.set_joint_translation("head", h_dx, h_dy + speak_bounce)
+            nod_dy, nod_rot = self.get_emphasis_nod_offset(t, is_speaking)
+            if abs(nod_dy) > 1e-4 or abs(nod_rot) > 1e-4:
+                h_dx, h_dy = pose.joint_translations.get("head", (0.0, 0.0))
+                pose.set_joint_translation("head", h_dx, h_dy + nod_dy)
+                h_rot = pose.joint_rotations.get("head", 0.0)
+                pose.set_joint_rotation("head", h_rot + nod_rot)
 
         # 3. Apply eye blinking
         blink = self.get_blink_progress(t)

@@ -199,15 +199,16 @@ class MascotSequencer:
 
         return pose
 
-    def evaluate_pose(self, t: float, transition_duration: float = 0.4) -> PoseState:
+    def evaluate_pose(self, t: float, transition_duration: float = 0.5) -> PoseState:
         """Evaluates and returns the complete, fully composited PoseState at timestamp t."""
-        # 1. Evaluate Gesture Base Pose (Smoothly eased in from idle if t < transition_duration)
+        # 1. Evaluate Gesture Base Pose (Smoothly eased in from idle or transitional posture if t < transition_duration)
         target_pose = self.get_base_gesture_pose(
             gesture=self.action.gesture,
             emotion=self.action.emotion,
             prop=self.action.prop
         )
         
+        is_transition = getattr(self.action, "transition_in", False)
         if self.action.gesture != "idle" and t < transition_duration:
             idle_pose = self.get_base_gesture_pose("idle", self.action.emotion)
             rel_t = max(0.0, min(1.0, t / transition_duration)) if transition_duration > 0 else 1.0
@@ -223,6 +224,21 @@ class MascotSequencer:
             if weight > 0.5:
                 evaluated_pose.active_attachments = target_pose.active_attachments.copy()
                 evaluated_pose.pupil_offset = target_pose.pupil_offset
+        elif is_transition and t < transition_duration:
+            # Distinct posture shift on narrative scene transition / entrance
+            rel_t = max(0.0, min(1.0, t / transition_duration)) if transition_duration > 0 else 1.0
+            weight = self.easing_curve.evaluate(rel_t)
+            evaluated_pose = target_pose.clone()
+            
+            # Subtly ease torso and head into resting presenter stance
+            # Start slightly inclined (-2.0 deg torso, +2.5 deg head) and settle to target
+            init_torso_rot = target_pose.joint_rotations.get("torso", 0.0) - 2.0
+            init_head_rot = target_pose.joint_rotations.get("head", 0.0) + 2.5
+            target_torso_rot = target_pose.joint_rotations.get("torso", 0.0)
+            target_head_rot = target_pose.joint_rotations.get("head", 0.0)
+            
+            evaluated_pose.set_joint_rotation("torso", init_torso_rot + weight * (target_torso_rot - init_torso_rot))
+            evaluated_pose.set_joint_rotation("head", init_head_rot + weight * (target_head_rot - init_head_rot))
         else:
             evaluated_pose = target_pose.clone()
 
@@ -238,6 +254,24 @@ class MascotSequencer:
             dt = max(1e-4, t - self._last_t) if t > self._last_t else 1.0 / 30.0
             self._last_t = t
             evaluated_pose = self.spring_sim.step(evaluated_pose, dt=dt)
+
+        # 5. Apply Entrance / Exit Transitions if requested on action
+        if getattr(self.action, "transition_in", False) and t < 0.35:
+            rel = t / 0.35
+            s = 1.70158
+            p = rel - 1.0
+            eased = p * p * ((s + 1) * p + s) + 1.0
+            dy = (1.0 - max(0.0, min(1.0, eased))) * 500.0
+            r_dx, r_dy = evaluated_pose.joint_translations.get("root", (0.0, 0.0))
+            evaluated_pose.set_joint_translation("root", r_dx, r_dy + dy)
+
+        duration = getattr(self.action, "duration", 0.0)
+        if getattr(self.action, "transition_out", False) and duration > 0.3 and t > (duration - 0.25):
+            rel = max(0.0, min(1.0, (duration - t) / 0.25))
+            eased = rel * rel
+            dy = (1.0 - eased) * 500.0
+            r_dx, r_dy = evaluated_pose.joint_translations.get("root", (0.0, 0.0))
+            evaluated_pose.set_joint_translation("root", r_dx, r_dy + dy)
 
         return evaluated_pose
 

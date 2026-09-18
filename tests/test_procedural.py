@@ -65,3 +65,28 @@ def test_procedural_apply_to_pose():
     assert pose_blink.blink_progress > 0.4
     assert pose_blink.active_attachments.get("eye_l_sclera") == "eyelid_blink"
     assert pose_blink.active_attachments.get("eye_r_sclera") == "eyelid_blink"
+
+
+def test_emphasis_nod_periodic_and_quiet():
+    cfg = MascotProceduralConfig(bounce_on_speak=True)
+    engine = ProceduralLifeEngine(config=cfg)
+
+    # 1. Non-speaking is completely quiet (0.0, 0.0)
+    dy, rot = engine.get_emphasis_nod_offset(0.1, is_speaking=False)
+    assert dy == 0.0
+    assert rot == 0.0
+
+    # 2. Speaking: during nod window (t=0.175s, halfway through 0.35s nod)
+    dy, rot = engine.get_emphasis_nod_offset(0.175, is_speaking=True)
+    assert dy < 0.0  # subtle dip
+    assert rot > 0.0  # subtle pitch nod down
+    assert abs(dy) <= 0.5
+    assert abs(rot) <= 0.6
+
+    # 3. Speaking: outside nod window (e.g. t=1.0s, 2.0s, 3.0s, 4.0s)
+    # The head must be steady and not bob continuously
+    for t_quiet in [0.5, 1.0, 2.0, 3.0, 4.0]:
+        dy_q, rot_q = engine.get_emphasis_nod_offset(t_quiet, is_speaking=True)
+        assert dy_q == 0.0
+        assert rot_q == 0.0
+
