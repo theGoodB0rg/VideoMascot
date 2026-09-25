@@ -73,7 +73,8 @@ class VideoOverlayCompositor:
         audio_path: Optional[Union[str, Path]] = None,
         vtt_path: Optional[Union[str, Path]] = None,
         crf: int = 20,
-        preset: str = "medium"
+        preset: str = "medium",
+        mute_base_audio: bool = True
     ) -> Path:
         """Composites an animated transparent mascot stream directly onto an input video file."""
         in_path = Path(input_video)
@@ -96,11 +97,14 @@ class VideoOverlayCompositor:
             act = MascotActionSchema()
             
         if not act.enabled:
-            # If mascot is explicitly disabled, simple pass-through copy
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", str(in_path), "-c", "copy", str(out_path)],
-                check=True, capture_output=True
-            )
+            # If mascot is explicitly disabled, pass-through copy
+            copy_cmd = ["ffmpeg", "-y", "-i", str(in_path), "-c:v", "copy"]
+            if mute_base_audio:
+                copy_cmd.append("-an")
+            else:
+                copy_cmd.extend(["-c:a", "copy"])
+            copy_cmd.append(str(out_path))
+            subprocess.run(copy_cmd, check=True, capture_output=True)
             return out_path
 
         # 2. Calculate mascot scaled dimensions & placement coordinates
@@ -129,14 +133,20 @@ class VideoOverlayCompositor:
             "-filter_complex",
             f"[0:v][1:v]overlay=x={pos_x}:y={pos_y}:eof_action=pass:shortest=1[outv]",
             "-map", "[outv]",
-            "-map", "0:a?",    # preserve base audio if present
+        ]
+
+        if not mute_base_audio:
+            ffmpeg_cmd.extend(["-map", "0:a?", "-c:a", "copy"])
+        else:
+            ffmpeg_cmd.append("-an")
+
+        ffmpeg_cmd.extend([
             "-c:v", "libx264",
             "-pix_fmt", "yuv420p",
             "-preset", preset,
             "-crf", str(crf),
-            "-c:a", "copy",
             str(out_path)
-        ]
+        ])
 
         resolved_vtt = vtt_path
         if resolved_vtt is None and audio_path:
