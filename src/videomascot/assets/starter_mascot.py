@@ -3,7 +3,9 @@ import math
 import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
-from videomascot.models.manifest import MascotManifest, BoneConfig, SlotConfig
+from videomascot.models.manifest import (
+    MascotManifest, BoneConfig, SlotConfig, PresentationProfileConfig, RigControlsConfig,
+)
 
 
 def create_starter_tech_chibi(output_dir: Path) -> Path:
@@ -395,7 +397,24 @@ def create_starter_tech_chibi(output_dir: Path) -> Path:
             "F_V": "F_V",
             "L_D_T_N": "L_D_T_N",
             "W_Q": "W_Q"
-        }
+        },
+        # A warm-blooded cartoon presenter: it breathes, blinks, glances about, and has
+        # the dual-arm rig and hand attachments for the full gesture vocabulary.
+        presentation_profile=PresentationProfileConfig(
+            controls=RigControlsConfig(head="head", body="torso", root="root"),
+            procedural={
+                "breathing": True,
+                "breathing_intensity": 0.55,
+                "blinking": True,
+                "gaze_saccades": True,
+                "bounce_on_speak": True,
+                "hover": False,
+            },
+            supported_gestures=(
+                "idle", "point_up_left", "point_up_right", "happy_wave",
+                "thumbs_up", "thinking", "shock", "shrug",
+            ),
+        ),
     )
 
     with open(bundle_dir / "manifest.json", "w", encoding="utf-8") as f:

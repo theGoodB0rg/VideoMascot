@@ -24,7 +24,7 @@ from videomascot.animation.sequencer import MascotSequencer
 from videomascot.pipeline.video_overlay import VideoOverlayCompositor
 from videomascot.engine import MascotEngine
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = [
     "Vector2D",
     "Transform2D",

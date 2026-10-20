@@ -114,6 +114,13 @@ class MascotActionSchema(BaseModel):
     speech_cues: List[SpeechCue] = Field(default_factory=list, description="Explicit phoneme / viseme timing cues")
     transition_in: bool = Field(default=False, description="Whether to slide in from bottom on start")
     transition_out: bool = Field(default=False, description="Whether to slide out downwards on exit")
+    posture_shift: bool = Field(
+        default=False,
+        description=(
+            "Settle into stance from a slight forward lean over the entrance window. "
+            "Separate from transition_in: a hard cut wants the settle without the slide."
+        ),
+    )
     duration: Optional[float] = Field(default=None, description="Clip duration in seconds for timing transitions")
 
 

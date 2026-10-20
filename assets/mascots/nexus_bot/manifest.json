@@ -494,5 +494,34 @@
     "chassis_light": "#f1f5f9",
     "neon_cyan": "#06b6d4",
     "core_pulse": "#00f5ff"
+  },
+  "presentation_profile": {
+    "schema_version": 1,
+    "articulation": "viseme_sprite",
+    "controls": {
+      "head": "head",
+      "body": null,
+      "root": "root"
+    },
+    "viseme_map": {},
+    "procedural": {
+      "breathing": false,
+      "blinking": true,
+      "gaze_saccades": true,
+      "bounce_on_speak": true,
+      "hover": true,
+      "hover_amplitude": 7.0,
+      "hover_bpm": 20.0
+    },
+    "supported_gestures": [
+      "idle",
+      "point_up_left",
+      "point_up_right",
+      "happy_wave",
+      "thumbs_up",
+      "thinking",
+      "shock",
+      "shrug"
+    ]
   }
 }

@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-10-20
+
+### Added
+- **`PresentationProfileConfig` on `MascotManifest`**: a bundle now ships its own movement
+  personality rather than relying on the host to invent one. It declares the rig controls a host
+  may drive (`head`/`body`/`root`, each nullable), a viseme map, `procedural` overrides onto
+  `MascotProceduralConfig`, and the `supported_gestures` the rig can actually strike.
+
+  Movement personality belongs to the character, not the pipeline. Without this the host had to
+  fall back on a single shared default, and three visually distinct mascots animated identically:
+  the moulded brick figure breathed, the levitating bot breathed, and neither differed in gesture
+  vocabulary despite having different rigs and different hand sprites.
+
+  All three starter generators now emit one:
+
+  | | breathing | hover | saccades | gestures | `body` control |
+  |---|---|---|---|---|---|
+  | `chibi_tech_guide` | yes (0.55) | no | yes | 8 | `torso` |
+  | `nexus_bot` | **no** | **yes** | yes | 8 | **unbound** |
+  | `brick_dev` | **no** | no | **no** | **6** | `torso` |
+
+  `nexus_bot` leaves `body` unbound because a levitating chassis has no torso to breathe with,
+  and an unbound control cannot be driven by accident. `brick_dev` poses by whole-torso sprite
+  swap rather than arm rotation, so its vocabulary is exactly the set of torso sprites that
+  exist: no `shock`, no `shrug`.
+
+- **`MascotManifest.validate_presentation()`**: rejects a profile that names a bone absent from
+  the rig, maps a viseme the rig does not define, sets an unknown or out-of-range procedural
+  value, or omits `idle` (the resting pose every other gesture interpolates from). A profile
+  that misnames a bone otherwise fails silently at render time, which is how a mascot ends up
+  visible but inert. Absent profiles remain valid, so existing bundles still load.
+
+- **`MascotActionSchema.posture_shift`**: separates the entrance settle from the slide-in.
+  `transition_in` drove both a subtle torso/head settle *and* a 500px slide up from off-screen,
+  so a host wanting a grounded presenter on a hard cut had to disable the flag and silently lost
+  the settle with it. `transition_in` remains a superset and keeps its existing meaning.
+
+### Fixed
+- **Version drift**: `pyproject.toml` declared `0.1.0` while `__init__.__version__` declared
+  `0.3.0`. Both now track the same release.
+
+---
+
 ## [0.2.0] - 2026-08-22
 
 ### Added

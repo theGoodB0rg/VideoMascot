@@ -519,5 +519,33 @@
     "W_Q": "W_Q"
   },
   "default_palette": {},
-  "palette_tokens": {}
+  "palette_tokens": {},
+  "presentation_profile": {
+    "schema_version": 1,
+    "articulation": "viseme_sprite",
+    "controls": {
+      "head": "head",
+      "body": "torso",
+      "root": "root"
+    },
+    "viseme_map": {},
+    "procedural": {
+      "breathing": true,
+      "breathing_intensity": 0.55,
+      "blinking": true,
+      "gaze_saccades": true,
+      "bounce_on_speak": true,
+      "hover": false
+    },
+    "supported_gestures": [
+      "idle",
+      "point_up_left",
+      "point_up_right",
+      "happy_wave",
+      "thumbs_up",
+      "thinking",
+      "shock",
+      "shrug"
+    ]
+  }
 }

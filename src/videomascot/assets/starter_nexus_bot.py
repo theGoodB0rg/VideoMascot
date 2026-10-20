@@ -8,7 +8,9 @@ from videomascot.models.manifest import (
     BoneConfig,
     SlotConfig,
     PhysicsConfig,
-    JointConstraintConfig
+    JointConstraintConfig,
+    PresentationProfileConfig,
+    RigControlsConfig
 )
 
 
@@ -495,7 +497,27 @@ def create_starter_nexus_bot(output_dir: Path) -> Path:
             "chassis_light": "#f1f5f9",
             "neon_cyan": "#06b6d4",
             "core_pulse": "#00f5ff"
-        }
+        },
+        # A levitating chassis. It has no lungs, so chest respiration is replaced by
+        # multi-harmonic hover drift; ``body`` is left unbound so a host cannot drive
+        # breathing through the torso by accident. The arm rig is full, so the gesture
+        # vocabulary is unrestricted.
+        presentation_profile=PresentationProfileConfig(
+            controls=RigControlsConfig(head="head", body=None, root="root"),
+            procedural={
+                "breathing": False,
+                "blinking": True,
+                "gaze_saccades": True,
+                "bounce_on_speak": True,
+                "hover": True,
+                "hover_amplitude": 7.0,
+                "hover_bpm": 20.0,
+            },
+            supported_gestures=(
+                "idle", "point_up_left", "point_up_right", "happy_wave",
+                "thumbs_up", "thinking", "shock", "shrug",
+            ),
+        )
     )
 
     with open(bundle_dir / "manifest.json", "w", encoding="utf-8") as f:

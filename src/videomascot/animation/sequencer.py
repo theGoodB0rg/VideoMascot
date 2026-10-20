@@ -208,7 +208,10 @@ class MascotSequencer:
             prop=self.action.prop
         )
         
-        is_transition = getattr(self.action, "transition_in", False)
+        # A slide-in implies a settle, but a settle does not imply a slide: on a hard cut
+        # the presenter should ease into stance without flying up from off-screen.
+        is_transition = (getattr(self.action, "posture_shift", False)
+                         or getattr(self.action, "transition_in", False))
         if self.action.gesture != "idle" and t < transition_duration:
             idle_pose = self.get_base_gesture_pose("idle", self.action.emotion)
             rel_t = max(0.0, min(1.0, t / transition_duration)) if transition_duration > 0 else 1.0

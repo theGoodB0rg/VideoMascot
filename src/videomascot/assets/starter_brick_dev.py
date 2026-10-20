@@ -8,7 +8,9 @@ from videomascot.models.manifest import (
     BoneConfig,
     SlotConfig,
     PhysicsConfig,
-    JointConstraintConfig
+    JointConstraintConfig,
+    PresentationProfileConfig,
+    RigControlsConfig
 )
 
 
@@ -451,7 +453,25 @@ def create_starter_brick_dev(output_dir: Path) -> Path:
             "L_D_T_N": "L_D_T_N",
             "W_Q": "W_Q"
         },
-        viseme_slot="mouth"
+        viseme_slot="mouth",
+        # Moulded ABS. It does not breathe, and its face is printed rather than rigged,
+        # so pupil saccades have nothing to move. Poses are whole-torso sprite swaps
+        # rather than arm rotation, which means the gesture set is exactly the set of
+        # torso sprites that exist: no ``shock``, no ``shrug``.
+        presentation_profile=PresentationProfileConfig(
+            controls=RigControlsConfig(head="head", body="torso", root="root"),
+            procedural={
+                "breathing": False,
+                "blinking": True,
+                "gaze_saccades": False,
+                "bounce_on_speak": True,
+                "hover": False,
+            },
+            supported_gestures=(
+                "idle", "point_up_left", "point_up_right", "happy_wave",
+                "thumbs_up", "thinking",
+            ),
+        )
     )
 
     manifest_path = bundle_dir / "manifest.json"

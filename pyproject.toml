@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videomascot"
-version = "0.1.0"
+version = "0.4.0"
 description = "Modular, scalable, AI-ready layered puppet and mascot animation engine for automated video pipelines"
 readme = "README.md"
 requires-python = ">=3.10"
