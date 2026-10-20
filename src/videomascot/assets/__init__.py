@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Callable, Dict, Tuple
 
 from videomascot.assets.starter_brick_dev import create_starter_brick_dev
+from videomascot.assets.starter_ink_chronicler import create_starter_ink_chronicler
 from videomascot.assets.starter_mascot import create_starter_tech_chibi
 from videomascot.assets.starter_nexus_bot import create_starter_nexus_bot
 
@@ -24,6 +25,7 @@ STARTER_BUNDLES: Dict[str, Callable[[Path], Path]] = {
     "chibi_tech_guide": create_starter_tech_chibi,
     "nexus_bot": create_starter_nexus_bot,
     "brick_dev": create_starter_brick_dev,
+    "ink_chronicler": create_starter_ink_chronicler,
 }
 
 
@@ -55,6 +57,7 @@ def generate_all_starter_bundles(output_dir: Path) -> Dict[str, Path]:
 __all__ = [
     "STARTER_BUNDLES",
     "create_starter_brick_dev",
+    "create_starter_ink_chronicler",
     "create_starter_nexus_bot",
     "create_starter_tech_chibi",
     "generate_all_starter_bundles",

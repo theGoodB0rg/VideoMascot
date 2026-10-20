@@ -39,6 +39,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that misnames a bone otherwise fails silently at render time, which is how a mascot ends up
   visible but inert. Absent profiles remain valid, so existing bundles still load.
 
+- **`ink_chronicler`**: an engraved hooded chronicler, for painterly history documentaries where
+  a flat-vector cartoon presenter is a register mismatch. Woodblock line and hatch on warm paper
+  with an amber rim; era- and culture-neutral in silhouette, so one character carries Egypt, Mali
+  and Rome without impersonating any of them.
+
+  Engraving rather than a painterly render is a deliberate choice: faking oil paint with drawing
+  primitives looks cheap, whereas line and hatch is what these primitives are actually good at.
+
+  Its rig is bone-for-bone identical to `chibi_tech_guide` — same canvas, bone positions, slot
+  offsets and sprite dimensions. The sequencer's gesture poses are hand-tuned joint angles against
+  that skeleton, so matching it means all eight gestures, both pointing solves and the prop
+  attachment work without touching the animation code. A test pins the bone parity, because a
+  moved joint would break the poses silently.
+
+  It also supplies the `focused` and `wide` eye states the sequencer asks for on `thinking` and
+  `shocked` and that `chibi_tech_guide` never had, and all 11 visemes.
+
 - **Starter-bundle registry** (`videomascot.assets`): `STARTER_BUNDLES`, `list_starter_bundles()`,
   `generate_starter_bundle()` and `generate_all_starter_bundles()`. Host pipelines keep their own
   copy of the generated bundles, which is exactly how those copies drift from the generators that

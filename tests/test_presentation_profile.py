@@ -10,9 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from videomascot.assets.starter_brick_dev import create_starter_brick_dev
-from videomascot.assets.starter_mascot import create_starter_tech_chibi
-from videomascot.assets.starter_nexus_bot import create_starter_nexus_bot
+from videomascot.assets import STARTER_BUNDLES
 from videomascot.models.manifest import (
     BoneConfig,
     MascotManifest,
@@ -20,11 +18,8 @@ from videomascot.models.manifest import (
     RigControlsConfig,
 )
 
-GENERATORS = {
-    "chibi_tech_guide": create_starter_tech_chibi,
-    "nexus_bot": create_starter_nexus_bot,
-    "brick_dev": create_starter_brick_dev,
-}
+#: Drive off the registry, so a character added later is covered without editing this file.
+GENERATORS = STARTER_BUNDLES
 
 
 @pytest.fixture(scope="module")
@@ -78,11 +73,15 @@ class TestCharactersAreDistinct:
     """The point of the feature: three mascots must not animate identically."""
 
     def test_movement_personalities_differ(self, manifests):
+        """Compare the whole procedural mapping, not a handful of booleans.
+
+        Two characters can share every on/off switch and still carry themselves
+        differently: breath rate and blink cadence are personality too, and a coarser
+        signature would call a brisk tutorial host and a measured chronicler identical.
+        """
         signatures = {
             name: (
-                manifest.presentation_profile.procedural.get("breathing"),
-                manifest.presentation_profile.procedural.get("hover"),
-                manifest.presentation_profile.procedural.get("gaze_saccades"),
+                tuple(sorted(manifest.presentation_profile.procedural.items())),
                 manifest.presentation_profile.supported_gestures,
             )
             for name, manifest in manifests.items()
@@ -109,6 +108,48 @@ class TestCharactersAreDistinct:
         assert "shock" not in gestures
         assert "shrug" not in gestures
         assert {"idle", "point_up_left", "thumbs_up"} <= gestures
+
+    def test_chronicler_carries_itself_more_slowly_than_the_chibi(self, manifests):
+        """A history presenter is not a tutorial host: slower breath, fewer blinks."""
+        chronicler = manifests["ink_chronicler"].presentation_profile.procedural
+        chibi = manifests["chibi_tech_guide"].presentation_profile.procedural
+        assert chronicler["breathing_bpm"] < chibi.get("breathing_bpm", 18.0)
+        assert chronicler["blink_interval_mean"] > chibi.get("blink_interval_mean", 3.5)
+
+
+class TestInkChronicler:
+    """The engraved presenter shares the chibi skeleton so every tuned gesture applies."""
+
+    def test_rig_is_bone_compatible_with_the_chibi(self, manifests):
+        assert (set(manifests["ink_chronicler"].bones)
+                == set(manifests["chibi_tech_guide"].bones))
+
+    def test_bone_positions_match_the_chibi(self, manifests):
+        """Gesture poses are hand-tuned joint angles; a moved joint silently breaks them."""
+        chronicler = manifests["ink_chronicler"].bones
+        chibi = manifests["chibi_tech_guide"].bones
+        for name, bone in chibi.items():
+            assert chronicler[name].position == bone.position, name
+            assert chronicler[name].parent == bone.parent, name
+
+    def test_supports_the_full_gesture_vocabulary(self, manifests):
+        assert len(manifests["ink_chronicler"].presentation_profile.supported_gestures) == 8
+
+    def test_defines_every_viseme_the_lipsync_can_emit(self, manifests):
+        """11 visemes, so an audio-aligned run never falls back for want of a sprite."""
+        assert len(manifests["ink_chronicler"].visemes) == 11
+
+    def test_offers_the_eye_states_the_sequencer_asks_for(self, manifests):
+        """default/happy/focused/wide/blink: the chibi lacks focused and wide."""
+        attachments = set(manifests["ink_chronicler"].slots["eye_l_sclera"].attachments)
+        assert {"default", "happy", "focused", "wide", "blink"} <= attachments
+
+    def test_keeps_the_pointer_prop_key(self, manifests):
+        """Art is a quill; the key stays 'pointer_stick' because that is what the host sets."""
+        assert "pointer_stick" in manifests["ink_chronicler"].slots["prop_r"].attachments
+
+    def test_does_not_hover(self, manifests):
+        assert manifests["ink_chronicler"].presentation_profile.procedural["hover"] is False
 
 
 class TestValidation:
