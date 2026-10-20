@@ -39,6 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that misnames a bone otherwise fails silently at render time, which is how a mascot ends up
   visible but inert. Absent profiles remain valid, so existing bundles still load.
 
+- **Starter-bundle registry** (`videomascot.assets`): `STARTER_BUNDLES`, `list_starter_bundles()`,
+  `generate_starter_bundle()` and `generate_all_starter_bundles()`. Host pipelines keep their own
+  copy of the generated bundles, which is exactly how those copies drift from the generators that
+  made them; a host can now regenerate the whole set by iterating the registry instead of importing
+  three factories by name. Manifests are deterministic, so a host can diff a regenerated manifest
+  against its committed one to detect drift. An unknown id raises `KeyError` naming the available
+  ones, rather than letting a typo silently resolve to a different character.
+
 - **`MascotActionSchema.posture_shift`**: separates the entrance settle from the slide-in.
   `transition_in` drove both a subtle torso/head settle *and* a 500px slide up from off-screen,
   so a host wanting a grounded presenter on a hard cut had to disable the flag and silently lost
