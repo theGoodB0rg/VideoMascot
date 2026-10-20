@@ -36,8 +36,8 @@ from videomascot.models.manifest import (
 INK = (38, 28, 20, 255)
 INK_SOFT = (74, 58, 44, 255)
 PAPER = (236, 222, 196, 255)
-SKIN = (210, 172, 132, 255)
-SKIN_SHADE = (176, 136, 96, 255)
+SKIN = (198, 152, 108, 255)
+SKIN_SHADE = (160, 116, 78, 255)
 ROBE = (78, 62, 48, 255)
 ROBE_SHADE = (52, 41, 31, 255)
 ROBE_LIGHT = (104, 84, 64, 255)
@@ -207,12 +207,12 @@ def _draw_eyes(bundle_dir: Path) -> None:
     def sclera(mirror: bool) -> Image.Image:
         image = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
         pen = ImageDraw.Draw(image)
-        pen.ellipse([4, 14, 46, 52], fill=PAPER, outline=INK, width=4)
+        pen.ellipse([8, 22, 42, 46], fill=PAPER, outline=INK, width=4)
         # Heavier lid line on the outer corner gives the eye a direction.
         if mirror:
-            pen.arc([4, 10, 46, 52], 190, 290, fill=INK, width=5)
+            pen.arc([8, 18, 42, 46], 190, 290, fill=INK, width=5)
         else:
-            pen.arc([4, 10, 46, 52], 250, 350, fill=INK, width=5)
+            pen.arc([8, 18, 42, 46], 250, 350, fill=INK, width=5)
         return image
 
     sclera(False).save(eyes_dir / "sclera_left.png")
@@ -220,31 +220,31 @@ def _draw_eyes(bundle_dir: Path) -> None:
 
     pupil = Image.new("RGBA", (32, 40), (0, 0, 0, 0))
     pen = ImageDraw.Draw(pupil)
-    pen.ellipse([6, 10, 26, 30], fill=INK)
-    pen.ellipse([12, 14, 18, 20], fill=PAPER)  # single catchlight
+    pen.ellipse([9, 14, 23, 28], fill=INK)
+    pen.ellipse([13, 17, 17, 21], fill=PAPER)  # single catchlight
     pupil.save(eyes_dir / "pupil.png")
 
     blink = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(blink)
-    pen.arc([4, 18, 46, 54], 200, 340, fill=INK, width=5)
+    pen.arc([8, 26, 42, 48], 200, 340, fill=INK, width=5)
     pen.line([(8, 36), (14, 44)], fill=INK_SOFT, width=2)
     pen.line([(42, 36), (36, 44)], fill=INK_SOFT, width=2)
     blink.save(eyes_dir / "eyelid_blink.png")
 
     happy = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(happy)
-    pen.arc([4, 20, 46, 60], 180, 360, fill=INK, width=5)
+    pen.arc([8, 26, 42, 52], 180, 360, fill=INK, width=5)
     happy.save(eyes_dir / "eye_happy.png")
 
     focused = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(focused)
-    pen.ellipse([4, 20, 46, 48], fill=PAPER, outline=INK, width=4)
-    pen.arc([4, 14, 46, 48], 200, 340, fill=INK, width=6)  # lowered lid: scrutiny
+    pen.ellipse([8, 26, 42, 44], fill=PAPER, outline=INK, width=4)
+    pen.arc([8, 20, 42, 44], 200, 340, fill=INK, width=6)  # lowered lid: scrutiny
     focused.save(eyes_dir / "eye_focused.png")
 
     wide = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(wide)
-    pen.ellipse([2, 8, 48, 58], fill=PAPER, outline=INK, width=4)
+    pen.ellipse([5, 16, 45, 52], fill=PAPER, outline=INK, width=4)
     wide.save(eyes_dir / "eye_wide.png")
 
 
