@@ -36,16 +36,50 @@ from videomascot.models.manifest import (
 INK = (38, 28, 20, 255)
 INK_SOFT = (74, 58, 44, 255)
 PAPER = (236, 222, 196, 255)
-SKIN = (198, 152, 108, 255)
-SKIN_SHADE = (160, 116, 78, 255)
-ROBE = (78, 62, 48, 255)
+SKIN = (182, 136, 94, 255)
+SKIN_SHADE = (146, 104, 68, 255)
+ROBE = (99, 81, 63, 255)
 ROBE_SHADE = (52, 41, 31, 255)
-ROBE_LIGHT = (104, 84, 64, 255)
+ROBE_LIGHT = (126, 104, 82, 255)
 AMBER = (198, 142, 58, 255)
 AMBER_LIGHT = (236, 188, 104, 255)
 MOUTH_DARK = (92, 54, 40, 255)
 
 OUTLINE = 5
+
+#: Head sprites are drawn at the legacy chibi resolution and then downsampled by this
+#: factor, with every head-relative slot offset scaled to match. Proportion is therefore
+#: one number rather than a hundred hand-placed coordinates, and drawing large then
+#: reducing supersamples the linework for free.
+#:
+#: The chibi rig puts the head at ~0.61 of figure height, which reads as a doll at the
+#: 216px guide scale and is upstream of most "this looks wrong" complaints. 0.60 here plus
+#: a full-length robe lands near 0.28, inside the adult band the legibility harness
+#: enforces. Bone positions are untouched, so every tuned gesture pose still applies.
+HEAD_SCALE = 0.55
+
+#: Robe canvas height. The chibi torso stops at 240, which leaves the figure stacked
+#: almost entirely out of head. A floor-length robe is both period-correct and the other
+#: half of fixing the proportion.
+ROBE_HEIGHT = 470
+
+#: Half-width of the robe at the shoulder, in rig units. Arms are parented at x = +/-65
+#: from the torso bone, so anything narrower leaves them attached to empty space. Measured
+#: at 58 before this, which is why the arms read as bolted on.
+SHOULDER_HALF_WIDTH = 78
+
+
+def _scaled(image: Image.Image, factor: float = HEAD_SCALE) -> Image.Image:
+    """Downsample a head sprite, preserving alpha, with antialiasing."""
+    return image.resize(
+        (max(1, int(round(image.width * factor))), max(1, int(round(image.height * factor)))),
+        Image.LANCZOS,
+    )
+
+
+def _head_offset(x: float, y: float) -> tuple:
+    """Scale a head-relative slot offset so features stay put as the head shrinks."""
+    return (int(round(x * HEAD_SCALE)), int(round(y * HEAD_SCALE)))
 
 
 def _hatch(size, mask_shape, color=INK_SOFT, spacing=7, width=2, slope=1):
@@ -112,92 +146,105 @@ def create_starter_ink_chronicler(output_dir: Path) -> Path:
 
 
 def _draw_head(bundle_dir: Path) -> None:
-    """300x280. Face and cowl only: eyes, brows and mouth are separate animated slots.
+    """Drawn at 300x300, saved at ``HEAD_SCALE``. Face, cowl and beard only.
 
-    The cowl has to drape *outside* the face silhouette and fall past the jaw, or it reads
-    as a bob haircut rather than a hood. The face oval is correspondingly narrow, which is
-    also what keeps an adult out of chibi proportions on a shared chibi skeleton.
+    Three things carry the read here, and all of them are silhouette rather than detail,
+    because detail is the first thing to go at a 216px guide scale:
+
+    * an angular cowl with a brow shelf, not a rounded bell. A bell outline reads as hair.
+    * a beard that extends *past* the jaw outline, widening the lower head. Hatched stubble
+      inside the existing outline disappears below about 0.34 scale and changes nothing.
+    * a squared jaw instead of an oval, so the head is not a soft egg.
+
+    Marks are heavier and sparser than looks right at 1:1, because the sprite is reduced to
+    60% on save and thin strokes simply vanish.
     """
-    image = Image.new("RGBA", (300, 280), (0, 0, 0, 0))
+    image = Image.new("RGBA", (300, 300), (0, 0, 0, 0))
 
-    # Cowl back: a wide draped mass behind everything, reaching the canvas edges.
+    # Cowl back: an angular draped mass behind everything, square at the shoulders.
     back = Image.new("RGBA", image.size, (0, 0, 0, 0))
     back_pen = ImageDraw.Draw(back)
-    back_pen.polygon(
-        [(150, 4), (248, 44), (280, 170), (266, 272), (34, 272), (20, 170), (52, 44)],
-        fill=ROBE, outline=INK,
-    )
-    back_pen.line(
-        [(150, 4), (248, 44), (280, 170), (266, 272), (34, 272), (20, 170), (52, 44), (150, 4)],
-        fill=INK, width=OUTLINE, joint="curve",
-    )
+    cowl = [(150, 2), (236, 30), (276, 112), (282, 296), (18, 296), (24, 112), (64, 30)]
+    back_pen.polygon(cowl, fill=ROBE, outline=INK)
+    back_pen.line([*cowl, cowl[0]], fill=INK, width=7, joint="curve")
     back.alpha_composite(_hatch(
         back.size,
-        lambda d: d.polygon([(150, 4), (52, 44), (20, 170), (34, 272), (150, 272)], fill=255),
-        color=ROBE_SHADE, spacing=7, width=2, slope=1,
+        lambda d: d.polygon([(150, 2), (64, 30), (24, 112), (18, 296), (150, 296)], fill=255),
+        color=ROBE_SHADE, spacing=11, width=3, slope=1,
     ))
     image.alpha_composite(back)
 
     pen = ImageDraw.Draw(image)
 
-    # Neck, in the cowl's shadow.
-    pen.polygon([(120, 180), (180, 180), (186, 272), (114, 272)], fill=SKIN_SHADE, outline=INK)
-    pen.line([(120, 180), (114, 272)], fill=INK, width=4)
-    pen.line([(180, 180), (186, 272)], fill=INK, width=4)
+    # Neck: wide and short. A narrow neck is one of the strongest juvenile cues.
+    pen.polygon([(112, 196), (188, 196), (196, 300), (104, 300)], fill=SKIN_SHADE, outline=INK)
+    pen.line([(112, 196), (104, 300)], fill=INK, width=6)
+    pen.line([(188, 196), (196, 300)], fill=INK, width=6)
 
-    # Face: narrow and long, set down inside the hood's opening.
-    face = [62, 34, 238, 246]
-    pen.ellipse(face, fill=SKIN, outline=INK, width=OUTLINE)
+    # Face: squared jaw rather than an oval, tapering to a broad chin.
+    face = [(78, 70), (222, 70), (236, 128), (226, 186), (196, 232),
+            (150, 248), (104, 232), (74, 186), (64, 128)]
+    pen.polygon(face, fill=SKIN, outline=INK)
+    pen.line([*face, face[0]], fill=INK, width=7, joint="curve")
 
-    # Shading: a crescent down the shadowed cheek, formed by subtracting an offset
-    # ellipse from the face. Masking to a half-bounding-box instead leaves a hard
-    # vertical seam straight down the middle of the face, which reads as grime.
+    face_box = (64, 70, 236, 248)
+
     def cheek_crescent(draw: ImageDraw.ImageDraw) -> None:
-        draw.ellipse(face, fill=255)
-        draw.ellipse([face[0] + 34, face[1] - 6, face[2] + 34, face[3] + 6], fill=0)
+        draw.polygon(face, fill=255)
+        draw.ellipse([face_box[0] + 40, face_box[1] - 8, face_box[2] + 40, face_box[3] + 8], fill=0)
 
     image.alpha_composite(_hatch(
-        image.size, cheek_crescent, color=SKIN_SHADE, spacing=9, width=1, slope=1,
+        image.size, cheek_crescent, color=SKIN_SHADE, spacing=11, width=2, slope=1,
     ))
 
-    # A second crescent under the jaw, for weight.
-    def jaw_crescent(draw: ImageDraw.ImageDraw) -> None:
-        draw.ellipse(face, fill=255)
-        draw.ellipse([face[0], face[1] - 30, face[2], face[3] - 30], fill=0)
-
-    image.alpha_composite(_hatch(
-        image.size, jaw_crescent, color=SKIN_SHADE, spacing=8, width=1, slope=-1,
+    # Beard: breaks the jaw outline, which is what survives downscaling. Sides run from
+    # the temples down; the chin mass hangs below the face polygon entirely.
+    beard = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    beard_pen = ImageDraw.Draw(beard)
+    chin = [(86, 182), (112, 226), (150, 238), (188, 226), (214, 182),
+            (212, 240), (178, 288), (150, 296), (122, 288), (88, 240)]
+    beard_pen.polygon(chin, fill=INK_SOFT, outline=INK)
+    beard_pen.line([*chin, chin[0]], fill=INK, width=6, joint="curve")
+    for side in ((74, 150), (226, 150)):  # sideburns joining the cowl to the beard
+        beard_pen.line([side, (side[0] + (14 if side[0] < 150 else -14), 214)],
+                       fill=INK_SOFT, width=16)
+    beard.alpha_composite(_hatch(
+        beard.size,
+        lambda d: d.polygon(chin, fill=255),
+        color=INK, spacing=9, width=2, slope=-1,
     ))
+    image.alpha_composite(beard)
+
+    # Moustache, just above the mouth slot, which composites over this sprite.
+    pen.polygon([(112, 160), (150, 152), (188, 160), (188, 176), (150, 168), (112, 176)],
+                fill=INK_SOFT, outline=INK)
 
     # Cowl front: the opening arch, drawn over the face so the hood sits on the brow.
     front = Image.new("RGBA", image.size, (0, 0, 0, 0))
     front_pen = ImageDraw.Draw(front)
-    front_pen.pieslice([30, 0, 270, 230], 180, 360, fill=ROBE, outline=INK, width=OUTLINE)
-    front_pen.pieslice([62, 26, 238, 250], 180, 360, fill=(0, 0, 0, 0))
-    front_pen.arc([62, 26, 238, 250], 180, 360, fill=INK, width=OUTLINE)
-
-    # The hatch mask must subtract the face opening too. Masking to the hood's bounding
-    # pieslice alone paints hatching straight across the cleared face, which looks like
-    # a shadow cast onto the cheek by nothing.
-    def hood_shadow(draw: ImageDraw.ImageDraw) -> None:
-        draw.pieslice([30, 0, 270, 230], 180, 272, fill=255)
-        draw.ellipse([62, 26, 238, 250], fill=0)
-
-    front.alpha_composite(_hatch(front.size, hood_shadow, color=ROBE_SHADE,
-                                 spacing=7, width=2, slope=1))
+    arch = [(150, 6), (232, 34), (266, 112), (266, 150), (236, 120),
+            (214, 66), (150, 50), (86, 66), (64, 120), (34, 150), (34, 112), (68, 34)]
+    front_pen.polygon(arch, fill=ROBE, outline=INK)
+    front_pen.line([*arch, arch[0]], fill=INK, width=7, joint="curve")
+    # Brow shelf: the hood's leading edge casting a hard line across the forehead.
+    front_pen.line([(80, 74), (150, 56), (220, 74)], fill=INK, width=9, joint="curve")
+    front.alpha_composite(_hatch(
+        front.size,
+        lambda d: d.polygon([(150, 6), (68, 34), (34, 112), (34, 150), (64, 120),
+                             (86, 66), (150, 50)], fill=255),
+        color=ROBE_SHADE, spacing=11, width=3, slope=1,
+    ))
     image.alpha_composite(front)
 
-    # Amber rim along the lit side: the Gilded Archival Woodblock signature, one stroke.
-    pen.arc([30, 0, 270, 230], 286, 358, fill=AMBER, width=5)
-    pen.line([(248, 44), (280, 170)], fill=AMBER, width=4)
-    pen.arc([62, 26, 238, 250], 300, 352, fill=AMBER_LIGHT, width=2)
+    # Amber rim along the lit side.
+    pen.line([(150, 6), (232, 34), (266, 112)], fill=AMBER, width=6, joint="curve")
+    pen.line([(236, 30), (276, 112), (282, 296)], fill=AMBER, width=4, joint="curve")
 
-    # Nose: one asymmetric side-plane line and a nostril tick. A centred vertical stroke
-    # with a symmetric arc under it reads as a stick figure, not a face.
-    pen.line([(146, 126), (140, 168)], fill=INK_SOFT, width=3)
-    pen.arc([136, 158, 164, 178], 170, 300, fill=INK_SOFT, width=3)
+    # Nose: one asymmetric side-plane line, heavier than looks right at 1:1.
+    pen.line([(146, 128), (138, 176)], fill=INK_SOFT, width=5)
+    pen.arc([134, 162, 166, 186], 170, 300, fill=INK_SOFT, width=5)
 
-    _grained(image).save(bundle_dir / "head" / "head_base.png")
+    _scaled(_grained(image)).save(bundle_dir / "head" / "head_base.png")
 
 
 def _draw_eyes(bundle_dir: Path) -> None:
@@ -215,37 +262,37 @@ def _draw_eyes(bundle_dir: Path) -> None:
             pen.arc([8, 18, 42, 46], 250, 350, fill=INK, width=5)
         return image
 
-    sclera(False).save(eyes_dir / "sclera_left.png")
-    sclera(True).save(eyes_dir / "sclera_right.png")
+    _scaled(sclera(False)).save(eyes_dir / "sclera_left.png")
+    _scaled(sclera(True)).save(eyes_dir / "sclera_right.png")
 
     pupil = Image.new("RGBA", (32, 40), (0, 0, 0, 0))
     pen = ImageDraw.Draw(pupil)
     pen.ellipse([9, 14, 23, 28], fill=INK)
     pen.ellipse([13, 17, 17, 21], fill=PAPER)  # single catchlight
-    pupil.save(eyes_dir / "pupil.png")
+    _scaled(pupil).save(eyes_dir / "pupil.png")
 
     blink = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(blink)
     pen.arc([8, 26, 42, 48], 200, 340, fill=INK, width=5)
     pen.line([(8, 36), (14, 44)], fill=INK_SOFT, width=2)
     pen.line([(42, 36), (36, 44)], fill=INK_SOFT, width=2)
-    blink.save(eyes_dir / "eyelid_blink.png")
+    _scaled(blink).save(eyes_dir / "eyelid_blink.png")
 
     happy = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(happy)
     pen.arc([8, 26, 42, 52], 180, 360, fill=INK, width=5)
-    happy.save(eyes_dir / "eye_happy.png")
+    _scaled(happy).save(eyes_dir / "eye_happy.png")
 
     focused = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(focused)
     pen.ellipse([8, 26, 42, 44], fill=PAPER, outline=INK, width=4)
     pen.arc([8, 20, 42, 44], 200, 340, fill=INK, width=6)  # lowered lid: scrutiny
-    focused.save(eyes_dir / "eye_focused.png")
+    _scaled(focused).save(eyes_dir / "eye_focused.png")
 
     wide = Image.new("RGBA", (50, 65), (0, 0, 0, 0))
     pen = ImageDraw.Draw(wide)
     pen.ellipse([5, 16, 45, 52], fill=PAPER, outline=INK, width=4)
-    wide.save(eyes_dir / "eye_wide.png")
+    _scaled(wide).save(eyes_dir / "eye_wide.png")
 
 
 def _draw_eyebrows(bundle_dir: Path) -> None:
@@ -260,7 +307,7 @@ def _draw_eyebrows(bundle_dir: Path) -> None:
             x = 8 + index * 7
             y = 13 + rise - int(2 * slope * index)
             pen.line([(x, y), (x + 3, y - 6)], fill=INK_SOFT, width=2)
-        image.save(brows_dir / name)
+        _scaled(image).save(brows_dir / name)
 
 
 def _draw_mouths(bundle_dir: Path) -> None:
@@ -311,45 +358,60 @@ def _draw_mouths(bundle_dir: Path) -> None:
     shapes["L_D_T_N"] = image
 
     for name, image in shapes.items():
-        image.save(mouth_dir / f"{name}.png")
+        _scaled(image).save(mouth_dir / f"{name}.png")
 
 
 def _draw_body(bundle_dir: Path) -> None:
     """220x240 robe, plus two 60x100 sleeve segments."""
-    torso = Image.new("RGBA", (220, 240), (0, 0, 0, 0))
+    # Canvas is wide enough for real shoulders and long enough for a floor-length robe.
+    # The chibi torso is 220x240, which leaves a figure that is mostly head.
+    width = 2 * (SHOULDER_HALF_WIDTH + 36)
+    torso = Image.new("RGBA", (width, ROBE_HEIGHT), (0, 0, 0, 0))
     pen = ImageDraw.Draw(torso)
+    centre = width // 2
+    hem = ROBE_HEIGHT - 10
 
-    # A robe widens toward the hem, and it has to fill the canvas or it reads as a
-    # jumper. The taper plus vertical folds is most of what says "not modern".
-    body = [(66, 4), (154, 4), (212, 236), (8, 236)]
+    # Shoulders must reach past the arm sockets at +/-65, or the arms attach to air.
+    shoulder_l = centre - SHOULDER_HALF_WIDTH
+    shoulder_r = centre + SHOULDER_HALF_WIDTH
+    body = [(shoulder_l, 24), (shoulder_r, 24), (centre + SHOULDER_HALF_WIDTH + 30, hem),
+            (centre - SHOULDER_HALF_WIDTH - 30, hem)]
     pen.polygon(body, fill=ROBE, outline=INK)
-    pen.line([*body, body[0]], fill=INK, width=OUTLINE, joint="curve")
+    pen.line([*body, body[0]], fill=INK, width=OUTLINE + 2, joint="curve")
 
     torso.alpha_composite(_hatch(
         torso.size,
-        lambda d: d.polygon([(66, 4), (104, 4), (104, 236), (8, 236)], fill=255),
-        color=ROBE_SHADE, spacing=8, width=2, slope=1,
+        lambda d: d.polygon([(shoulder_l, 24), (centre, 24), (centre, hem),
+                             (centre - SHOULDER_HALF_WIDTH - 30, hem)], fill=255),
+        color=ROBE_SHADE, spacing=11, width=3, slope=1,
     ))
 
-    # Hanging folds: straight lines fanning from the shoulders to the hem.
-    for top_x, bottom_x in ((88, 56), (110, 110), (132, 164)):
-        pen.line([(top_x, 60), (bottom_x, 232)], fill=ROBE_SHADE, width=3)
+    # Hanging folds fanning from the shoulders to the hem.
+    for offset in (-42, 0, 42):
+        pen.line([(centre + offset, 96), (centre + int(offset * 1.7), hem - 6)],
+                 fill=ROBE_SHADE, width=4)
 
     # Lit edge, opposite the hatching.
-    pen.line([(154, 10), (206, 232)], fill=ROBE_LIGHT, width=6)
-    pen.line([(159, 10), (211, 232)], fill=AMBER, width=3)
+    pen.line([(shoulder_r, 30), (centre + SHOULDER_HALF_WIDTH + 24, hem - 6)],
+             fill=ROBE_LIGHT, width=7)
+    pen.line([(shoulder_r + 6, 30), (centre + SHOULDER_HALF_WIDTH + 30, hem - 6)],
+             fill=AMBER, width=3)
 
-    # Collar and a stole running the full length: the amber trim that ties the figure
-    # to the brand palette, and the strongest read at thumbnail size.
-    pen.polygon([(66, 4), (154, 4), (110, 70)], fill=ROBE_SHADE, outline=INK)
-    pen.line([(66, 4), (110, 70)], fill=AMBER, width=5)
-    pen.line([(154, 4), (110, 70)], fill=AMBER, width=5)
-    pen.line([(96, 70), (86, 234)], fill=AMBER, width=5)
-    pen.line([(124, 70), (134, 234)], fill=AMBER, width=5)
+    # Collar and a stole running the full length: the strongest read at thumbnail size.
+    pen.polygon([(shoulder_l + 18, 24), (shoulder_r - 18, 24), (centre, 108)],
+                fill=ROBE_SHADE, outline=INK)
+    pen.line([(shoulder_l + 18, 24), (centre, 108)], fill=AMBER, width=6)
+    pen.line([(shoulder_r - 18, 24), (centre, 108)], fill=AMBER, width=6)
+    pen.line([(centre - 18, 108), (centre - 30, hem - 8)], fill=AMBER, width=6)
+    pen.line([(centre + 18, 108), (centre + 30, hem - 8)], fill=AMBER, width=6)
 
-    # Belt.
-    pen.rectangle([46, 150, 176, 170], fill=ROBE_SHADE, outline=INK, width=3)
-    pen.line([(46, 160), (176, 160)], fill=AMBER, width=3)
+    # Belt, placed on the body rather than at the canvas midpoint.
+    belt_y = 214
+    pen.rectangle([centre - SHOULDER_HALF_WIDTH - 2, belt_y,
+                   centre + SHOULDER_HALF_WIDTH + 2, belt_y + 26],
+                  fill=ROBE_SHADE, outline=INK, width=4)
+    pen.line([(centre - SHOULDER_HALF_WIDTH - 2, belt_y + 13),
+              (centre + SHOULDER_HALF_WIDTH + 2, belt_y + 13)], fill=AMBER, width=4)
 
     _grained(torso).save(bundle_dir / "body" / "torso.png")
 
@@ -449,12 +511,14 @@ def _build_manifest() -> MascotManifest:
             "prop_r": BoneConfig(parent="hand_r", position=(0, 10), pivot=(0, 0), z_index=20),
         },
         slots={
-            "torso": SlotConfig(bone="torso", default_attachment="default", offset=(-110, -120),
+            "torso": SlotConfig(bone="torso", default_attachment="default",
+                                offset=(-(SHOULDER_HALF_WIDTH + 36), -120),
                                 attachments={"default": "body/torso.png"}, z_index=1),
-            "head_base": SlotConfig(bone="head", default_attachment="default", offset=(-150, -240),
+            "head_base": SlotConfig(bone="head", default_attachment="default",
+                                    offset=_head_offset(-150, -250),
                                     attachments={"default": "head/head_base.png"}, z_index=1),
             "eye_l_sclera": SlotConfig(
-                bone="head", default_attachment="default", offset=(-75, -135),
+                bone="head", default_attachment="default", offset=_head_offset(-57, -130),
                 attachments={
                     "default": "head/eyes/sclera_left.png",
                     "blink": "head/eyes/eyelid_blink.png",
@@ -463,10 +527,11 @@ def _build_manifest() -> MascotManifest:
                     "wide": "head/eyes/eye_wide.png",
                 },
                 z_index=2),
-            "eye_l_pupil": SlotConfig(bone="head", default_attachment="default", offset=(-66, -122),
+            "eye_l_pupil": SlotConfig(bone="head", default_attachment="default",
+                                      offset=_head_offset(-48, -117),
                                       attachments={"default": "head/eyes/pupil.png"}, z_index=3),
             "eye_r_sclera": SlotConfig(
-                bone="head", default_attachment="default", offset=(25, -135),
+                bone="head", default_attachment="default", offset=_head_offset(7, -130),
                 attachments={
                     "default": "head/eyes/sclera_right.png",
                     "blink": "head/eyes/eyelid_blink.png",
@@ -475,14 +540,17 @@ def _build_manifest() -> MascotManifest:
                     "wide": "head/eyes/eye_wide.png",
                 },
                 z_index=2),
-            "eye_r_pupil": SlotConfig(bone="head", default_attachment="default", offset=(34, -122),
+            "eye_r_pupil": SlotConfig(bone="head", default_attachment="default",
+                                      offset=_head_offset(16, -117),
                                       attachments={"default": "head/eyes/pupil.png"}, z_index=3),
-            "eyebrow_l": SlotConfig(bone="head", default_attachment="default", offset=(-70, -155),
+            "eyebrow_l": SlotConfig(bone="head", default_attachment="default",
+                                    offset=_head_offset(-54, -158),
                                     attachments={"default": "head/eyebrows/left.png"}, z_index=4),
-            "eyebrow_r": SlotConfig(bone="head", default_attachment="default", offset=(25, -155),
+            "eyebrow_r": SlotConfig(bone="head", default_attachment="default",
+                                    offset=_head_offset(10, -158),
                                     attachments={"default": "head/eyebrows/right.png"}, z_index=4),
             "mouth": SlotConfig(
-                bone="head", default_attachment="rest", offset=(-40, -85),
+                bone="head", default_attachment="rest", offset=_head_offset(-40, -80),
                 attachments={name: f"head/mouth/{name}.png" for name in (
                     "rest", "smile", "open_smile", "A_I", "E", "O", "U",
                     "M_B_P", "F_V", "L_D_T_N", "W_Q")},

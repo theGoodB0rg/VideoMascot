@@ -39,6 +39,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that misnames a bone otherwise fails silently at render time, which is how a mascot ends up
   visible but inert. Absent profiles remain valid, so existing bundles still load.
 
+### Changed
+- **`ink_chronicler` re-proportioned for the sizes it is actually rendered at.** The first cut
+  inherited the chibi skeleton's proportions wholesale and was reviewed at native sprite
+  resolution, where they look stylised. At the 216px guide scale they read as a doll, and a doll
+  with soft features reads female regardless of intent.
+
+  | | before | after |
+  |---|---|---|
+  | head height / figure height | 0.614 | **0.303** |
+  | shoulder half-width vs arm socket | 58 vs 65 (arms float) | **89 vs 65** |
+  | brightest-pixel concentration in head | 1.14 | **0.54** |
+  | silhouette overlap with `chibi_tech_guide` | 0.812 | **0.692** |
+
+  Proportion is now one constant, `HEAD_SCALE`, applied to the head sprites on save and to every
+  head-relative slot offset, instead of a hundred hand-placed coordinates. Bone positions are
+  untouched, so all eight gesture poses and both pointing solves still apply: **sprite sizes and
+  slot offsets were never the thing the sequencer depends on**, which an earlier note in this file
+  got wrong.
+
+  The masculine read is carried by silhouette rather than detail, because detail is the first
+  thing lost at guide scale: an angular cowl with a brow shelf instead of a rounded bell, a beard
+  that extends past the jaw outline, a squared jaw, and shoulders wide enough to carry the arms.
+
 - **`ink_chronicler`**: an engraved hooded chronicler, for painterly history documentaries where
   a flat-vector cartoon presenter is a register mismatch. Woodblock line and hatch on warm paper
   with an amber rim; era- and culture-neutral in silhouette, so one character carries Egypt, Mali
