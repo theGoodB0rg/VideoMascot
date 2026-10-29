@@ -133,7 +133,12 @@ class SpriteCompositor:
             if bone_name in pose.joint_scales:
                 sx, sy = pose.joint_scales[bone_name]
                 base_scale = Vector2D(base_scale.x * sx, base_scale.y * sy)
-                
+            if cfg.constraints is not None:
+                # Declared limits are enforced, not advisory: a cut-out head turned past its
+                # range shows the seam it was cut along.
+                base_rot = max(cfg.constraints.min_rotation_deg,
+                               min(cfg.constraints.max_rotation_deg, base_rot))
+
             bone.local_position = base_pos
             bone.local_rotation_deg = base_rot
             bone.local_scale = base_scale
@@ -164,6 +169,11 @@ class SpriteCompositor:
             tex = slot.get_active_image()
             if tex is None:
                 continue
+            blend = pose.attachment_blends.get(slot.name)
+            if blend is not None:
+                tex = self._blend_attachments(slot, blend[0], tex, blend[1])
+                if tex is None:
+                    continue
 
             tw, th = tex.size
             world_t = slot.get_slot_transform()
@@ -208,4 +218,36 @@ class SpriteCompositor:
             canvas = canvas.resize(target_size, Image.LANCZOS)
 
         return canvas
+
+    @staticmethod
+    def _blend_attachments(
+        slot: Slot, outgoing_name: str, incoming: Image.Image, outgoing_weight: float
+    ) -> Optional[Image.Image]:
+        """Crossfade two attachments of one slot without the figure going see-through.
+
+        A symmetric dissolve leaves both poses half transparent mid-fade, so the backdrop
+        shows through the body like a double exposure. Instead the incoming pose fades in
+        *over* a still-solid outgoing pose during the first half, and the outgoing pose
+        fades out *beneath* a solid incoming one during the second. Only the parts where
+        the poses differ (a raised arm) ever dissolve. Textures of different sizes (an
+        overlay fading in from an empty placeholder) are faded by alpha alone.
+        """
+        import numpy as np
+
+        w_out = max(0.0, min(1.0, float(outgoing_weight)))
+        w_in = 1.0 - w_out
+        outgoing = slot.attachments.get(outgoing_name)
+
+        def faded(img: Image.Image, opacity: float) -> Image.Image:
+            if opacity >= 1.0:
+                return img
+            arr = np.asarray(img, dtype=np.float32).copy()
+            arr[..., 3] *= max(0.0, opacity)
+            return Image.fromarray(arr.round().astype(np.uint8), mode="RGBA")
+
+        if outgoing is None or outgoing.size != incoming.size:
+            return incoming if w_out <= 0.0 else faded(incoming, w_in)
+        base = faded(outgoing, min(1.0, 2.0 * w_out))
+        top = faded(incoming, min(1.0, 2.0 * w_in))
+        return Image.alpha_composite(base, top)
 

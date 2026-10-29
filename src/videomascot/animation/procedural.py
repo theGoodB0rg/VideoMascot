@@ -99,6 +99,8 @@ class ProceduralLifeEngine:
         
         # Pre-generate deterministic blink timestamps for up to 600 seconds
         self._blink_times = self._generate_blink_schedule(max_duration=600.0)
+        self._env = 0.0
+        self._env_t: Optional[float] = None
 
     def _generate_blink_schedule(self, max_duration: float) -> List[float]:
         """Generates Poisson-distributed blink timestamps."""
@@ -184,8 +186,47 @@ class ProceduralLifeEngine:
         if cycle_t < nod_dur:
             # Smooth bell curve / Hann window: 0 -> 1 -> 0
             w = 0.5 * (1.0 - math.cos(2.0 * math.pi * (cycle_t / nod_dur)))
-            return (-0.5 * w, 0.6 * w)
+            return (-self.config.nod_amplitude_px * w, self.config.nod_amplitude_deg * w)
         return (0.0, 0.0)
+
+    def _speech_envelope(self, t: float, is_speaking: bool) -> float:
+        """Speaking activity smoothed with a fast attack and slow release, in [0, 1].
+
+        Stateful: frames are evaluated in order within a clip. A backwards step in time
+        (a fresh clip reusing the engine) restarts the envelope from silence.
+        """
+        last = self._env_t
+        dt = 0.0 if last is None or t < last else min(0.25, t - last)
+        if last is None or t < last:
+            self._env = 0.0
+        self._env_t = t
+        tau = 0.12 if is_speaking else 0.55
+        target = 1.0 if is_speaking else 0.0
+        if dt > 0.0:
+            self._env += (target - self._env) * (1.0 - math.exp(-dt / tau))
+        return self._env
+
+    def get_speech_head_motion(self, t: float, is_speaking: bool) -> Tuple[float, float]:
+        """Head (rotation_deg, dy_px) that animates with speech and settles in silence.
+
+        Two incommensurate sines rather than noise, so a render is reproducible frame for frame.
+        """
+        deg = self.config.speech_head_motion_deg
+        px = self.config.speech_head_motion_px
+        if deg <= 0.0 and px <= 0.0:
+            return (0.0, 0.0)
+        env = self._speech_envelope(t, is_speaking)
+        tau = 2.0 * math.pi
+        rot = deg * env * (0.6 * math.sin(tau * 0.53 * t + 1.1) + 0.4 * math.sin(tau * 1.31 * t + 0.4))
+        dy = px * env * (0.7 * math.sin(tau * 1.9 * t) + 0.3 * math.sin(tau * 3.1 * t + 0.9))
+        return (rot, dy)
+
+    def get_sway(self, t: float) -> Tuple[float, float]:
+        """Slow idle drift as (head_rotation_deg, body_rotation_deg)."""
+        tau = 2.0 * math.pi
+        head = self.config.head_sway_deg * (math.sin(tau * 0.13 * t) + 0.5 * math.sin(tau * 0.29 * t + 2.0)) / 1.5
+        body = self.config.body_sway_deg * (math.sin(tau * 0.085 * t + 0.7) + 0.4 * math.sin(tau * 0.21 * t)) / 1.4
+        return (head, body)
 
     def apply(self, pose: PoseState, t: float, is_speaking: bool = False) -> PoseState:
         """Applies procedural life transformations to a PoseState at time t."""
@@ -212,6 +253,16 @@ class ProceduralLifeEngine:
                 pose.set_joint_translation("head", h_dx, h_dy + nod_dy)
                 h_rot = pose.joint_rotations.get("head", 0.0)
                 pose.set_joint_rotation("head", h_rot + nod_rot)
+
+        # 2b. Speech-following head motion and slow idle sway
+        talk_rot, talk_dy = self.get_speech_head_motion(t, is_speaking)
+        sway_head, sway_body = self.get_sway(t)
+        if talk_rot or talk_dy or sway_head:
+            h_dx, h_dy = pose.joint_translations.get("head", (0.0, 0.0))
+            pose.set_joint_translation("head", h_dx, h_dy + talk_dy)
+            pose.set_joint_rotation("head", pose.joint_rotations.get("head", 0.0) + talk_rot + sway_head)
+        if sway_body and not self.config.hover:
+            pose.set_joint_rotation("torso", pose.joint_rotations.get("torso", 0.0) + sway_body)
 
         # 3. Apply eye blinking
         blink = self.get_blink_progress(t)

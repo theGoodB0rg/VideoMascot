@@ -64,6 +64,21 @@ class MascotProceduralConfig(BaseModel):
     hover_amplitude: float = Field(default=6.0, ge=0.0, le=30.0, description="Vertical levitation drift amplitude in pixels")
     hover_bpm: float = Field(default=22.0, ge=5.0, le=60.0, description="Levitation hover cycles per minute")
 
+    # Amplitudes are in canvas pixels and degrees, so they scale with the rig they drive: the
+    # historical constants (0.5px, 0.6deg) suit a 1000px chibi and vanish on a painted figure.
+    nod_amplitude_px: float = Field(default=0.5, ge=0.0, le=20.0, description="Emphasis nod head dip in canvas pixels")
+    nod_amplitude_deg: float = Field(default=0.6, ge=0.0, le=10.0, description="Emphasis nod head pitch in degrees")
+    speech_head_motion_deg: float = Field(default=0.0, ge=0.0, le=10.0, description="Head rotation that follows speech, enveloped by speaking activity")
+    speech_head_motion_px: float = Field(default=0.0, ge=0.0, le=20.0, description="Head bob in canvas pixels that follows speech")
+    head_sway_deg: float = Field(default=0.0, ge=0.0, le=10.0, description="Slow idle head drift in degrees, present whether or not speaking")
+    body_sway_deg: float = Field(default=0.0, ge=0.0, le=5.0, description="Slow weight-shift rotation of the body about its root, in degrees")
+
+    # Gesture staging. With pose_crossfade 0 the gesture eases in from idle immediately and
+    # swaps attachments at the halfway mark, which is the historical behaviour.
+    gesture_lead_in: float = Field(default=0.0, ge=0.0, le=5.0, description="Seconds held in idle before a gesture begins")
+    pose_crossfade: float = Field(default=0.0, ge=0.0, le=2.0, description="Seconds over which pose attachments blend instead of swapping")
+    pose_angle_scale: float = Field(default=1.0, ge=0.0, le=1.0, description="Multiplier on the fixed bone angles each gesture and emotion sets. Rigs whose gestures are painted sprites already show the pose; the angles only consume joint range that live motion needs")
+
 
 
 class SpeechCue(BaseModel):

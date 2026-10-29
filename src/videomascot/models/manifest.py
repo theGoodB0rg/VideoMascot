@@ -71,6 +71,14 @@ class PresentationProfileConfig(BaseModel):
         default=("idle",),
         description="Gestures this rig has the bones and hand attachments to perform.",
     )
+    framing: Literal["full_figure", "waist_up"] = Field(
+        default="full_figure",
+        description=(
+            "How much of the figure the art shows. A waist_up figure is cut off at the "
+            "bottom of its canvas, so a host must dock that edge to the frame edge (or the "
+            "cut floats in mid-air) and size it as a person, not as a whole body."
+        ),
+    )
 
 
 class MascotManifest(BaseModel):

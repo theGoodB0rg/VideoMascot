@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-10-29
+
+### Added
+- **Motion controls for rigs built from painted sprites.** A painted presenter cannot bend an
+  arm, so what makes it read as alive is head motion, sway and blinking. New
+  `MascotProceduralConfig` fields, all defaulting to the previous behaviour:
+  - `speech_head_motion_deg` / `speech_head_motion_px`: head turn and bob that follow speech,
+    shaped by a fast-attack, slow-release speaking envelope so the head settles in pauses.
+    Deterministic (two incommensurate sines), so renders reproduce frame for frame.
+  - `head_sway_deg` / `body_sway_deg`: slow idle drift of the head, and a weight shift of the
+    whole body about its root.
+  - `nod_amplitude_px` / `nod_amplitude_deg`: the emphasis nod was hard-coded at 0.5px and
+    0.6deg, sized for a 1000px chibi and invisible on a painted figure.
+  - `pose_angle_scale`: multiplier on the fixed head and torso angles each gesture and emotion
+    sets. Those angles exist to pose jointed rigs; on a painted sprite the pose is already in
+    the art, and the angles only used up the joint range live motion needed.
+- **Staged gestures with pose crossfades** (`gesture_lead_in`, `pose_crossfade`). The figure
+  holds idle, then blends into the gesture's attachments instead of swapping them halfway
+  through a 0.5s ease. `PoseState.attachment_blends` carries the outgoing attachment and its
+  weight. The compositor fades the incoming pose in *over* a still-solid outgoing pose, then
+  fades the outgoing one out beneath it, so the body never turns see-through the way a
+  symmetric dissolve does (the first attempt showed exactly that double exposure).
+- **`PresentationProfileConfig.framing`** (`full_figure` | `waist_up`). A waist-up figure is
+  cut off at the bottom of its canvas; a host must dock that edge to the frame edge and size
+  it as a person rather than a whole body, and now has a declared way to know.
+
+### Fixed
+- **Bone `constraints` are enforced.** `JointConstraintConfig` was declared by `brick_dev`
+  and `nexus_bot` and never applied. Rotation limits now clamp the final joint angle in the
+  compositor. Neither starter rig's existing poses come near its limit, so their renders are
+  unchanged.
 ## [0.4.0] - 2026-10-20
 
 ### Added

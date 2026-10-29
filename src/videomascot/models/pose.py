@@ -10,6 +10,8 @@ class PoseState(BaseModel):
     joint_scales: Dict[str, Tuple[float, float]] = Field(default_factory=dict)
     
     active_attachments: Dict[str, str] = Field(default_factory=dict)
+    # slot -> (outgoing attachment, its remaining weight in [0, 1]) during a pose crossfade
+    attachment_blends: Dict[str, Tuple[str, float]] = Field(default_factory=dict)
     viseme: str = "rest"
     
     # Eye tracking & blinking

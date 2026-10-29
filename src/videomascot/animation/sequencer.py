@@ -197,6 +197,11 @@ class MascotSequencer:
         else: # camera
             pose.pupil_offset = (0.0, 0.0)
 
+        angle_scale = self.action.procedural.pose_angle_scale
+        if angle_scale != 1.0:
+            for bone, angle in list(pose.joint_rotations.items()):
+                pose.joint_rotations[bone] = angle * angle_scale
+
         return pose
 
     def evaluate_pose(self, t: float, transition_duration: float = 0.5) -> PoseState:
@@ -212,7 +217,27 @@ class MascotSequencer:
         # the presenter should ease into stance without flying up from off-screen.
         is_transition = (getattr(self.action, "posture_shift", False)
                          or getattr(self.action, "transition_in", False))
-        if self.action.gesture != "idle" and t < transition_duration:
+        cfg = self.action.procedural
+        lead_in, crossfade = cfg.gesture_lead_in, cfg.pose_crossfade
+        if self.action.gesture != "idle" and crossfade > 0.0 and t < lead_in + crossfade:
+            # Staged gesture: hold idle, then blend pose attachments rather than popping them.
+            # Rigs whose poses are whole painted sprites have nothing to interpolate but the
+            # pixels, so the blend is what makes a gesture read as movement.
+            idle_pose = self.get_base_gesture_pose("idle", self.action.emotion)
+            weight = smoothstep(lead_in, lead_in + crossfade, t)
+            evaluated_pose = idle_pose.clone()
+            for bone, target_angle in target_pose.joint_rotations.items():
+                idle_angle = idle_pose.joint_rotations.get(bone, 0.0)
+                evaluated_pose.set_joint_rotation(bone, idle_angle + weight * (target_angle - idle_angle))
+            if weight > 0.0:
+                for slot, attachment in target_pose.active_attachments.items():
+                    outgoing = idle_pose.active_attachments.get(slot)
+                    evaluated_pose.set_attachment(slot, attachment)
+                    if outgoing is not None and outgoing != attachment:
+                        evaluated_pose.attachment_blends[slot] = (outgoing, 1.0 - weight)
+                if weight > 0.5:
+                    evaluated_pose.pupil_offset = target_pose.pupil_offset
+        elif self.action.gesture != "idle" and t < transition_duration and crossfade <= 0.0:
             idle_pose = self.get_base_gesture_pose("idle", self.action.emotion)
             rel_t = max(0.0, min(1.0, t / transition_duration)) if transition_duration > 0 else 1.0
             weight = self.easing_curve.evaluate(rel_t)
