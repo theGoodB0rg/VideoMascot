@@ -219,11 +219,13 @@ class MascotSequencer:
                          or getattr(self.action, "transition_in", False))
         cfg = self.action.procedural
         lead_in, crossfade = cfg.gesture_lead_in, cfg.pose_crossfade
-        if self.action.gesture != "idle" and crossfade > 0.0 and t < lead_in + crossfade:
-            # Staged gesture: hold idle, then blend pose attachments rather than popping them.
-            # Rigs whose poses are whole painted sprites have nothing to interpolate but the
-            # pixels, so the blend is what makes a gesture read as movement.
-            idle_pose = self.get_base_gesture_pose("idle", self.action.emotion)
+        entry = getattr(self.action, "entry_gesture", "idle") or "idle"
+        if self.action.gesture != entry and crossfade > 0.0 and t < lead_in + crossfade:
+            # Staged gesture: hold the entry pose (idle unless the figure arrives already
+            # gesturing), then blend pose attachments rather than popping them. Rigs whose
+            # poses are whole painted sprites have nothing to interpolate but the pixels, so
+            # the blend is what makes a gesture read as movement.
+            idle_pose = self.get_base_gesture_pose(entry, self.action.emotion)
             weight = smoothstep(lead_in, lead_in + crossfade, t)
             evaluated_pose = idle_pose.clone()
             for bone, target_angle in target_pose.joint_rotations.items():

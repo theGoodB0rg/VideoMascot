@@ -196,3 +196,64 @@ class TestFraming:
         assert PresentationProfileConfig(framing="waist_up").framing == "waist_up"
         with pytest.raises(Exception):
             PresentationProfileConfig(framing="head_only")
+
+
+class TestContinuingAcrossClips:
+    """A presenter held across consecutive clips must not snap back to idle at each cut."""
+
+    def _seq(self, gesture, entry):
+        manifest = MascotManifest.model_validate({
+            "id": "t", "name": "t", "canvas_size": [8, 8],
+            "bones": {"root": {}, "torso": {"parent": "root"}},
+            "slots": {"torso": {"bone": "torso", "attachments": {
+                "default": "a.png", "shrug": "b.png", "happy_wave": "c.png"}}},
+        })
+        action = MascotActionSchema(gesture=gesture, entry_gesture=entry,
+                                    procedural=MascotProceduralConfig(
+                                        breathing=False, blinking=False,
+                                        gesture_lead_in=0.7, pose_crossfade=0.24))
+        return MascotSequencer(action, manifest=manifest)
+
+    def test_the_same_gesture_simply_continues(self):
+        pose = self._seq("shrug", "shrug").evaluate_pose(0.0)
+        assert pose.active_attachments["torso"] == "shrug"
+        assert pose.attachment_blends == {}
+
+    def test_a_new_gesture_blends_from_the_held_one(self):
+        seq = self._seq("happy_wave", "shrug")
+        assert seq.evaluate_pose(0.3).active_attachments["torso"] == "shrug"
+        mid = seq.evaluate_pose(0.82)
+        assert mid.active_attachments["torso"] == "happy_wave"
+        assert mid.attachment_blends["torso"][0] == "shrug"
+
+    def test_returning_to_idle_blends_down_from_the_held_gesture(self):
+        seq = self._seq("idle", "shrug")
+        assert seq.evaluate_pose(0.3).active_attachments["torso"] == "shrug"
+        assert seq.evaluate_pose(1.2).active_attachments["torso"] == "default"
+
+    def test_entry_defaults_to_idle(self):
+        assert MascotActionSchema().entry_gesture == "idle"
+
+
+class TestConcurrentRendering:
+    def test_threads_sharing_a_compositor_get_their_own_pose(self, tmp_path):
+        """Regression: parallel scene renders flashed one gesture's frames into another's."""
+        import threading
+        comp = TestCompositor()._compositor(tmp_path)
+        poses = {"default": PoseState(active_attachments={"torso": "default"}, joint_rotations={"head": 3.0}),
+                 "shrug": PoseState(active_attachments={"torso": "shrug"}, joint_rotations={"head": -3.0})}
+        ref = {k: np.asarray(comp.render_frame(p, target_size=(240, 240))) for k, p in poses.items()}
+        bad = []
+
+        def work(key):
+            for _ in range(150):
+                frame = np.asarray(comp.render_frame(poses[key], target_size=(240, 240)))
+                if not np.array_equal(frame, ref[key]):
+                    bad.append(key)
+
+        threads = [threading.Thread(target=work, args=(k,)) for k in poses for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert not bad, f"{len(bad)} frames rendered with another thread's pose"

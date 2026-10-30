@@ -129,6 +129,15 @@ class MascotActionSchema(BaseModel):
     speech_cues: List[SpeechCue] = Field(default_factory=list, description="Explicit phoneme / viseme timing cues")
     transition_in: bool = Field(default=False, description="Whether to slide in from bottom on start")
     transition_out: bool = Field(default=False, description="Whether to slide out downwards on exit")
+    entry_gesture: str = Field(
+        default="idle",
+        description=(
+            "The gesture the figure is already holding when this action starts, for a "
+            "presenter that stays on screen across consecutive clips. A staged gesture blends "
+            "in from this pose rather than from idle, and when it equals ``gesture`` the pose "
+            "simply continues, so a clip boundary does not snap the figure back to standing."
+        ),
+    )
     posture_shift: bool = Field(
         default=False,
         description=(

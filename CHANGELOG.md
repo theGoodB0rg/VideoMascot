@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-10-30
+
+### Added
+- **`MascotActionSchema.entry_gesture`**: the gesture a figure already holds when an action
+  starts, for a presenter that stays on screen across consecutive clips. A staged gesture
+  blends in from that pose instead of from idle, and when it equals `gesture` the pose simply
+  continues, so a clip boundary no longer snaps the figure back to standing. Defaults to
+  `idle`, the previous behaviour.
+
+### Fixed
+- **`SpriteCompositor.render_frame` is thread-safe.** It poses the shared bone and slot
+  objects and then composites them, so two threads rendering one character interleaved and a
+  frame picked up the other thread's pose: a host rendering scenes in parallel showed
+  single-frame flashes of one gesture inside another. A stress test corrupted 25 of 180
+  frames under three threads; rendering is now serialised per compositor, and a regression
+  test fails reliably without the lock.
+
 ## [0.5.0] - 2026-10-29
 
 ### Added

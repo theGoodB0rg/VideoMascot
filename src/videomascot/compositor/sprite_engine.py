@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 from PIL import Image
@@ -25,6 +26,11 @@ class SpriteCompositor:
         
         self.hierarchy = BoneHierarchy()
         self.slots: Dict[str, Slot] = {}
+        # render_frame poses the shared bone and slot objects before compositing them, so
+        # two threads rendering one character interleave and a frame picks up the other
+        # thread's pose. A host rendering scenes in parallel showed single-frame flashes of
+        # one gesture inside another (25 of 180 frames under three threads).
+        self._render_lock = threading.RLock()
         
         self._build_rig()
         self._load_textures()
@@ -117,7 +123,18 @@ class SpriteCompositor:
         pose: PoseState,
         target_size: Optional[Tuple[int, int]] = None
     ) -> Image.Image:
-        """Renders a single frame of the mascot at the given pose with local bounding-box blitting."""
+        """Renders a single frame of the mascot at the given pose with local bounding-box blitting.
+
+        Thread-safe: rendering is serialised per compositor because it poses shared state.
+        """
+        with self._render_lock:
+            return self._render_frame_locked(pose, target_size)
+
+    def _render_frame_locked(
+        self,
+        pose: PoseState,
+        target_size: Optional[Tuple[int, int]] = None
+    ) -> Image.Image:
         # 1. Apply pose parameters to bones
         for bone_name, bone in self.hierarchy.bones.items():
             cfg = self.manifest.bones[bone_name]
